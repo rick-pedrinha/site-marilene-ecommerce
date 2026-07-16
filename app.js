@@ -571,6 +571,48 @@ function setupEventListeners() {
     document.getElementById('admin-chat-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendAdminChatMessage();
     });
+
+    // Mobile Bottom Navigation Links
+    document.getElementById('mob-nav-home').addEventListener('click', function(e) {
+        e.preventDefault();
+        setActiveMobileTab(this);
+        navigateTo('store-view');
+        const el = document.getElementById('home');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('mob-nav-products').addEventListener('click', function(e) {
+        e.preventDefault();
+        setActiveMobileTab(this);
+        navigateTo('store-view');
+        const el = document.getElementById('produtos');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    document.getElementById('mob-nav-cart').addEventListener('click', function(e) {
+        e.preventDefault();
+        setActiveMobileTab(this);
+        document.getElementById('cart-drawer').classList.add('open');
+        document.getElementById('cart-drawer-overlay').classList.add('open');
+    });
+
+    document.getElementById('mob-nav-user').addEventListener('click', function(e) {
+        e.preventDefault();
+        setActiveMobileTab(this);
+        if (currentUser) {
+            renderAccountProfile();
+            navigateTo('account-view');
+        } else {
+            openAuthModal();
+        }
+    });
+}
+
+function setActiveMobileTab(activeEl) {
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    activeEl.classList.add('active');
 }
 
 /* ==========================================================================
@@ -804,6 +846,9 @@ function updateCartUI() {
 
     const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
     badge.innerText = totalItems;
+    
+    const mobBadge = document.getElementById('mob-cart-badge');
+    if (mobBadge) mobBadge.innerText = totalItems;
 
     if (cart.length === 0) {
         container.innerHTML = `<p class="placeholder-text">Seu carrinho está vazio. Adicione um moletom autoral!</p>`;
