@@ -2,6 +2,8 @@
 
 E-commerce de moda autoral completo e responsivo, desenvolvido com tecnologias nativas de alta performance, incluindo um Painel Administrativo integrado para controle de vendas, estoque e pedidos.
 
+🔗 **Link do Site Publicado**: [https://rick-pedrinha.github.io/site-marilene-ecommerce/](https://rick-pedrinha.github.io/site-marilene-ecommerce/)
+
 ---
 
 ## 🌟 Funcionalidades Principais
