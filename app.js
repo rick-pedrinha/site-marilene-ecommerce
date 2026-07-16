@@ -636,37 +636,40 @@ function renderProductGrid() {
             });
         });
 
-        // Imagem principal padrão
-        const displayImage = `${p.imagePrefix}_branco.jpg`;
-
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        card.innerHTML = `
-            <div class="product-card-image-box">
-                <img src="${displayImage}" alt="${p.name}" class="product-card-img" onerror="this.src='https://placehold.co/400x400?text=Moletom+Marilene'">
-                <span class="product-card-badge">${p.tag || 'Exclusivo'}</span>
-            </div>
-            <div class="product-card-content">
-                <h3 class="product-card-title">${p.name}</h3>
-                <p class="product-card-desc">${p.description}</p>
-                <div class="product-card-footer">
-                    <span class="product-card-price">R$ ${minPrice.toFixed(2).replace('.', ',')}</span>
-                    <button class="btn btn-secondary btn-small" onclick="openProductModal('${p.id}')">Ver Detalhes</button>
+        p.colors.forEach(color => {
+            const displayImage = `${p.imagePrefix}_${color.toLowerCase()}.jpg`;
+            const card = document.createElement('article');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <button class="product-card-image-box" onclick="openProductModal('${p.id}', '${color}')" aria-label="Ver ${p.name} na cor ${color}">
+                    <img src="${displayImage}" alt="${p.name} na cor ${color}" class="product-card-img" onerror="this.src='https://placehold.co/400x400?text=Moletom+Marilene'">
+                    <span class="product-card-badge">${p.tag || 'Exclusivo'}</span>
+                    <span class="product-card-color">${color}</span>
+                </button>
+                <div class="product-card-content">
+                    <span class="product-eyebrow">CASACO COM CAPUZ · ${color.toUpperCase()}</span>
+                    <h3 class="product-card-title">${p.name}</h3>
+                    <p class="product-card-desc">${p.description}</p>
+                    <div class="product-payment-note">PIX com 5% OFF ou cartão em até 6x</div>
+                    <div class="product-card-footer">
+                        <div><small>A partir de</small><span class="product-card-price">R$ ${minPrice.toFixed(2).replace('.', ',')}</span></div>
+                        <button class="btn btn-primary btn-small" onclick="openProductModal('${p.id}', '${color}')">Fazer pedido</button>
+                    </div>
                 </div>
-            </div>
-        `;
-        container.appendChild(card);
+            `;
+            container.appendChild(card);
+        });
     });
 }
 
-function openProductModal(productId) {
+function openProductModal(productId, preferredColor = null) {
     const p = products.find(prod => prod.id === productId);
     if (!p) return;
 
     const modalContent = document.getElementById('modal-product-detail-container');
     
     // Estado do produto atual no Modal
-    let selectedColor = p.colors[0];
+    let selectedColor = preferredColor && p.colors.includes(preferredColor) ? preferredColor : p.colors[0];
     let selectedSize = p.sizes[1]; // Inicia no tamanho M por padrão
     
     const updateModalView = () => {
@@ -737,8 +740,9 @@ function openProductModal(productId) {
 
                 <!-- Botão de Carrinho -->
                 <button class="btn btn-primary btn-block" id="modal-add-to-cart-btn" ${currentStock <= 0 ? 'disabled' : ''}>
-                    ${currentStock <= 0 ? 'Sem Estoque Disponível' : 'Adicionar ao Carrinho'}
+                    ${currentStock <= 0 ? 'Sem Estoque Disponível' : 'Adicionar ao carrinho e pedir'}
                 </button>
+                <p class="modal-payment-hint">Pague com PIX (5% OFF), cartão de crédito ou boleto no checkout.</p>
             </div>
         `;
 

@@ -13,6 +13,8 @@
     --text-light: #f5f5f7;
     --text-muted: #9e9ea7;
     --text-dark: #121216;
+    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-text: 'Montserrat', Arial, sans-serif;
     
     /* Layout & Styling details */
     --border-color: rgba(255, 255, 255, 0.08);
@@ -44,7 +46,7 @@
 body {
     background-color: var(--bg-primary);
     color: var(--text-light);
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--font-text);
     line-height: 1.6;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -202,7 +204,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .logo-first {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--font-display);
     font-size: 26px;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -356,6 +358,30 @@ input:focus, select:focus, textarea:focus {
     flex-wrap: wrap;
 }
 
+.purchase-confidence {
+    max-width: 1160px;
+    margin: -34px auto 0;
+    position: relative;
+    z-index: 3;
+    background: #f4efe4;
+    color: #151515;
+    border-radius: var(--radius-lg);
+    padding: 22px 28px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) auto;
+    gap: 22px;
+    align-items: center;
+    box-shadow: var(--shadow-lg);
+}
+
+.purchase-confidence-item { display: flex; align-items: center; gap: 12px; }
+.purchase-confidence-item div { display: flex; flex-direction: column; }
+.purchase-confidence-item strong { font-size: 14px; }
+.purchase-confidence-item span:not(.confidence-icon) { color: #686158; font-size: 12px; }
+.confidence-icon { font-size: 22px; color: #8f711c; }
+.confidence-cta { color: #151515; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+.confidence-cta:hover { color: #8f711c; }
+
 /* ==========================================================================
    PRODUCTS GRID & VITRINE
    ========================================================================== */
@@ -372,6 +398,15 @@ input:focus, select:focus, textarea:focus {
 .section-header {
     text-align: center;
     margin-bottom: 60px;
+}
+
+.section-kicker,
+.product-eyebrow {
+    color: var(--accent-gold);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
 }
 
 .section-title {
@@ -403,7 +438,7 @@ input:focus, select:focus, textarea:focus {
 
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 40px;
 }
 
@@ -428,6 +463,10 @@ input:focus, select:focus, textarea:focus {
     aspect-ratio: 1;
     overflow: hidden;
     background-color: #f7f7f7;
+    border: 0;
+    padding: 0;
+    width: 100%;
+    cursor: pointer;
 }
 
 .product-card-img {
@@ -456,6 +495,21 @@ input:focus, select:focus, textarea:focus {
     letter-spacing: 0.05em;
 }
 
+.product-card-color {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    background: rgba(10, 10, 12, .82);
+    color: white;
+    border: 1px solid rgba(255,255,255,.18);
+    padding: 7px 11px;
+    border-radius: 30px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
 .product-card-content {
     padding: 24px;
     display: flex;
@@ -467,7 +521,7 @@ input:focus, select:focus, textarea:focus {
     font-family: 'Montserrat', sans-serif;
     font-size: 20px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin: 8px 0;
 }
 
 .product-card-desc {
@@ -489,11 +543,36 @@ input:focus, select:focus, textarea:focus {
     border-top: 1px solid var(--border-color);
 }
 
+.product-card-footer > div { display: flex; flex-direction: column; gap: 3px; }
+.product-card-footer small { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.product-payment-note { color: var(--accent-gold); font-size: 11px; margin-bottom: 4px; }
+
 .product-card-price {
     font-size: 18px;
     font-weight: 700;
     color: var(--text-light);
 }
+
+.campaign-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px 110px;
+}
+
+.campaign-heading { max-width: 700px; margin-bottom: 38px; }
+.campaign-heading h2 { font: 700 clamp(32px, 5vw, 56px)/1.08 'Montserrat', sans-serif; margin: 10px 0 14px; }
+.campaign-heading p { color: var(--text-muted); font-size: 17px; }
+.campaign-layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; }
+.campaign-photo, .campaign-video-card { position: relative; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-color); background: var(--bg-secondary); margin: 0; min-height: 430px; }
+.campaign-photo img, .campaign-video-card video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.campaign-photo figcaption { position: absolute; inset: auto 16px 16px; padding: 12px 14px; background: rgba(10,10,12,.76); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.14); font-size: 12px; font-weight: 700; }
+.campaign-video-card { grid-row: span 2; min-height: 878px; }
+.campaign-video-copy { position: absolute; left: 20px; right: 20px; bottom: 20px; background: rgba(10,10,12,.78); backdrop-filter: blur(12px); padding: 16px 18px; display: flex; flex-direction: column; pointer-events: none; }
+.campaign-video-copy span { color: var(--accent-gold); font-size: 10px; font-weight: 800; letter-spacing: .14em; }
+.campaign-video-copy strong { font-size: 20px; margin-top: 3px; }
+.campaign-photo-wide { min-height: 430px; }
+
+.modal-payment-hint { color: var(--text-muted); font-size: 11px; text-align: center; margin-top: -6px; }
 
 /* ==========================================================================
    OUR STORY SECTION
@@ -2143,6 +2222,17 @@ input:focus, select:focus, textarea:focus {
 
 /* Responsive fixes */
 @media (max-width: 900px) {
+    .purchase-confidence {
+        margin: 0;
+        border-radius: 0;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .confidence-cta { grid-column: 1 / -1; text-align: center; }
+
+    .campaign-layout { grid-template-columns: 1fr 1fr; }
+    .campaign-video-card { grid-row: auto; min-height: 560px; }
+
     .story-container {
         grid-template-columns: 1fr;
         gap: 40px;
@@ -2186,6 +2276,14 @@ input:focus, select:focus, textarea:focus {
     .products-section {
         padding: 60px 15px;
     }
+
+    .purchase-confidence { grid-template-columns: 1fr; padding: 24px 20px; gap: 16px; }
+    .confidence-cta { grid-column: auto; text-align: left; border-top: 1px solid rgba(0,0,0,.12); padding-top: 16px; }
+    .products-grid { grid-template-columns: 1fr; gap: 24px; }
+    .product-card-footer { align-items: flex-end; gap: 12px; }
+    .campaign-section { padding: 20px 15px 70px; }
+    .campaign-layout { grid-template-columns: 1fr; }
+    .campaign-photo, .campaign-video-card, .campaign-photo-wide { min-height: 520px; }
     
     .cart-drawer {
         width: 100%;
@@ -2618,6 +2716,42 @@ input:focus, select:focus, textarea:focus {
         bottom: 76px;
         right: 16px;
     }
+}
+
+/* Tipografia inspirada na assinatura visual MARILENE NAUMEBORE */
+.hero-title,
+.section-title,
+.campaign-heading h2,
+.story-title,
+.product-card-title,
+.modal-product-title,
+.cart-drawer-header h2,
+.feature-card h3,
+.form-section-title,
+.summary-card h3,
+.confirmation-title,
+.delivery-details-box h3,
+.admin-content-header h2,
+.admin-card-header h3,
+.footer-brand h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: 0.015em;
+}
+
+.hero-title,
+.campaign-heading h2,
+.story-title {
+    text-wrap: balance;
+    letter-spacing: 0.025em;
+}
+
+.product-card-price,
+.modal-product-price,
+.total-highlight span:last-child {
+    font-family: var(--font-display);
+    font-variant-numeric: lining-nums;
+    letter-spacing: 0.02em;
 }
 
 

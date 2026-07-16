@@ -12,6 +12,7 @@ const MIME_TYPES = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png',
+    '.mp4': 'video/mp4',
     '.svg': 'image/svg+xml',
     '.json': 'application/json'
 };
@@ -57,9 +58,11 @@ server.listen(PORT, () => {
     console.log(`======================================================\n`);
 
     // Abrir o navegador automaticamente no Windows
-    exec(`cmd /c start ${url}`, (err) => {
-        if (err) {
-            console.log(`Nota: Não foi possível abrir o navegador automaticamente, acesse ${url} no seu browser.`);
-        }
-    });
+    if (!process.env.MN_NO_BROWSER) {
+        exec(`cmd /c start ${url}`, (err) => {
+            if (err) {
+                console.log(`Nota: Não foi possível abrir o navegador automaticamente, acesse ${url} no seu browser.`);
+            }
+        });
+    }
 });
