@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marilene Naumebore | E-commerce de Moda Autoral</title>
+    <meta name="description" content="Moda autoral brasileira com história e significado. Adquira os moletons exclusivos MARIA e Quem Protege Não Dorme. Entregas para todo o Brasil.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- APP WRAPPER (SPA) -->
+    <div id="app">
+        
+        <!-- LOJA CONTAINER -->
+        <div id="store-view" class="view-section active">
+            <!-- Header/Navegação -->
+            <header class="main-header">
+                <div class="header-container">
+                    <a href="#" class="logo" id="nav-logo">
+                        <span class="logo-first">MARILENE</span>
+                        <span class="logo-last">NAUMEBORE</span>
+                    </a>
+                    <nav class="main-nav">
+                        <a href="#home" class="nav-link active">Início</a>
+                        <a href="#produtos" class="nav-link">Coleções</a>
+                        <a href="#historia" class="nav-link">Nossa História</a>
+                        <a href="#" class="nav-link admin-btn-nav" id="go-to-admin-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Painel Admin
+                        </a>
+                    </nav>
+                    <div class="header-actions">
+                        <button class="cart-trigger" id="cart-btn" aria-label="Abrir Carrinho">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                            <span class="cart-count" id="cart-badge">0</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Hero Section -->
+            <section class="hero-section" id="home">
+                <div class="hero-overlay"></div>
+                <div class="hero-content">
+                    <span class="hero-subtitle">COLEÇÃO AUTORAL BRASILEIRA</span>
+                    <h1 class="hero-title">Arte, Proteção & Ancestralidade em Algodão</h1>
+                    <p class="hero-description">Moletons premium com designs exclusivos que vestem com significado, história e pertencimento cultural. Produzido com afeto em Brasília.</p>
+                    <div class="hero-actions">
+                        <a href="#produtos" class="btn btn-primary">Ver Coleções</a>
+                        <a href="#historia" class="btn btn-secondary">Conheça Nossa História</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vitrine de Produtos / Coleções -->
+            <section class="products-section" id="produtos">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Nossas Criações</h2>
+                        <p class="section-subtitle">Vista a nossa verdade. Tecido encorpado de alta gramatura com acabamento impecável.</p>
+                    </div>
+                    <div class="products-grid" id="products-list-container">
+                        <!-- Gerado dinamicamente por JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Nossa História Section -->
+            <section class="story-section" id="historia">
+                <div class="story-container">
+                    <div class="story-image-side">
+                        <img src="assets/marilene_banner.jpg" alt="Marilene Naumebore no jardim" class="story-img">
+                        <div class="story-badge">
+                            <span class="badge-title">Marilene Naumebore</span>
+                            <span class="badge-desc">Estilo e Identidade</span>
+                        </div>
+                    </div>
+                    <div class="story-text-side">
+                        <span class="story-tag">POR TRÁS DA MARCA</span>
+                        <h2 class="story-title">Moda é Expressão, Cultura e Resistência</h2>
+                        <p class="story-paragraph">A marca <strong>Marilene Naumebore</strong> nasce da fusão entre a riqueza da cultura afro-brasileira, a força da natureza e o design urbano. Cada estampa conta uma história de proteção e identidade.</p>
+                        <p class="story-paragraph">O moletom <strong>"Quem Protege Não Dorme"</strong> traz a Espada de São Jorge como escudo de proteção espiritual e energia positiva contra todo o mal, uma tradição popular brasileira que agora vira alta moda urbana.</p>
+                        <p class="story-paragraph">A coleção <strong>"MARIA"</strong> celebra as mulheres negras brasileiras, representadas pela silhueta majestosa com cabelo afro e a emblemática flor vermelha. É uma homenagem à força, beleza e legado de tantas Marias que movem este país.</p>
+                        <div class="story-footer">
+                            <a href="https://www.instagram.com/marilene_naumebore/" target="_blank" class="instagram-link">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                                Acompanhe no Instagram @marilene_naumebore
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diferenciais da Loja -->
+            <section class="features-section">
+                <div class="features-container">
+                    <div class="feature-card">
+                        <div class="feature-icon">🇧🇷</div>
+                        <h3>Envio para todo o Brasil</h3>
+                        <p>Frete seguro com cálculo de entrega dinâmico para qualquer região.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Compra 100% Segura</h3>
+                        <p>Ambiente protegido e diversas opções de pagamento seguro.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">✨</div>
+                        <h3>Qualidade Premium</h3>
+                        <p>Algodão certificado, costuras reforçadas e estampas duráveis de alta resolução.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Rodapé -->
+            <footer class="main-footer">
+                <div class="footer-container">
+                    <div class="footer-brand">
+                        <h3>MARILENE NAUMEBORE</h3>
+                        <p>Moda com propósito, história e proteção nacional.</p>
+                    </div>
+                    <div class="footer-links">
+                        <h4>Navegação</h4>
+                        <a href="#home">Início</a>
+                        <a href="#produtos">Coleções</a>
+                        <a href="#historia">Nossa História</a>
+                    </div>
+                    <div class="footer-contact">
+                        <h4>Contato & Atendimento</h4>
+                        <p>Email: contato@marilenenaumebore.com.br</p>
+                        <p>WhatsApp: (61) 98888-7777</p>
+                        <p>Brasília - DF</p>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2026 Marilene Naumebore. Todos os direitos reservados. Feito no Brasil.</p>
+                    <a href="#" class="admin-login-link" id="footer-admin-link">Acesso Administrativo</a>
+                </div>
+            </footer>
+        </div>
+
+        <!-- DETALHES DO PRODUTO MODAL -->
+        <div class="modal-overlay" id="product-modal">
+            <div class="modal-card">
+                <button class="modal-close" id="close-modal-btn" aria-label="Fechar Modal">&times;</button>
+                <div class="modal-grid" id="modal-product-detail-container">
+                    <!-- Gerado dinamicamente por JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- CARRINHO LATERAL DRAWER -->
+        <div class="cart-drawer" id="cart-drawer">
+            <div class="cart-drawer-header">
+                <h2>Seu Carrinho</h2>
+                <button class="cart-drawer-close" id="close-cart-btn" aria-label="Fechar Carrinho">&times;</button>
+            </div>
+            <div class="cart-drawer-content">
+                <div class="cart-items-list" id="cart-items-container">
+                    <!-- Gerado dinamicamente por JS -->
+                </div>
+                
+                <!-- Resumo do Carrinho -->
+                <div class="cart-summary-box">
+                    <div class="summary-line">
+                        <span>Subtotal</span>
+                        <span id="cart-subtotal">R$ 0,00</span>
+                    </div>
+                    <p class="shipping-info-text">Frete e impostos calculados no checkout.</p>
+                    <button class="btn btn-primary btn-block" id="checkout-trigger-btn" disabled>Finalizar Compra</button>
+                    <button class="btn btn-text btn-block" id="continue-shopping-btn">Continuar Comprando</button>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-overlay" id="cart-drawer-overlay"></div>
+
+        <!-- TELA DE CHECKOUT -->
+        <div id="checkout-view" class="view-section">
+            <header class="checkout-header">
+                <div class="checkout-header-container">
+                    <a href="#" class="checkout-back" id="back-to-store-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                        Voltar para a Loja
+                    </a>
+                    <span class="checkout-logo">MARILENE NAUMEBORE | CHECKOUT</span>
+                </div>
+            </header>
+
+            <main class="checkout-main">
+                <div class="checkout-container">
+                    <!-- Formulário de Compra -->
+                    <div class="checkout-form-side">
+                        <form id="checkout-form" onsubmit="event.preventDefault();">
+                            <!-- Seção Dados Pessoais -->
+                            <div class="form-section">
+                                <h3 class="form-section-title"><span class="number">1</span> Dados Pessoais</h3>
+                                <div class="form-grid">
+                                    <div class="form-group col-12">
+                                        <label for="cust-name">Nome Completo</label>
+                                        <input type="text" id="cust-name" required placeholder="Digite seu nome completo">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cust-email">E-mail</label>
+                                        <input type="email" id="cust-email" required placeholder="seuemail@exemplo.com">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cust-phone">WhatsApp / Celular</label>
+                                        <input type="tel" id="cust-phone" required placeholder="(00) 90000-0000">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cust-cpf">CPF</label>
+                                        <input type="text" id="cust-cpf" required placeholder="000.000.000-00">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Seção Endereço de Entrega -->
+                            <div class="form-section">
+                                <h3 class="form-section-title"><span class="number">2</span> Endereço de Entrega</h3>
+                                <div class="form-grid">
+                                    <div class="form-group col-6">
+                                        <label for="cust-cep">CEP</label>
+                                        <div class="cep-input-group">
+                                            <input type="text" id="cust-cep" required placeholder="00000-000" maxlength="9">
+                                            <button type="button" class="btn btn-secondary" id="calculate-shipping-btn">Calcular Frete</button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cust-state">Estado</label>
+                                        <input type="text" id="cust-state" readonly placeholder="Calculado pelo CEP">
+                                    </div>
+                                    <div class="form-group col-10">
+                                        <label for="cust-street">Rua/Logradouro</label>
+                                        <input type="text" id="cust-street" required placeholder="Av. Principal, Rua 1...">
+                                    </div>
+                                    <div class="form-group col-2">
+                                        <label for="cust-number">Número</label>
+                                        <input type="text" id="cust-number" required placeholder="123">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cust-neighborhood">Bairro</label>
+                                        <input type="text" id="cust-neighborhood" required placeholder="Centro, Copacabana...">
+                                    </div>
+                                    <div class="form-group col-6">
+                                        <label for="cust-city">Cidade</label>
+                                        <input type="text" id="cust-city" required placeholder="São Paulo, Brasília...">
+                                    </div>
+                                    <div class="form-group col-12">
+                                        <label for="cust-complement">Complemento (Opcional)</label>
+                                        <input type="text" id="cust-complement" placeholder="Apto 12, Bloco B...">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Seção Opções de Envio -->
+                            <div class="form-section">
+                                <h3 class="form-section-title"><span class="number">3</span> Forma de Envio</h3>
+                                <div class="shipping-options-list" id="shipping-options-container">
+                                    <p class="placeholder-text">Insira e calcule o seu CEP acima para carregar as opções de envio para sua região.</p>
+                                </div>
+                            </div>
+
+                            <!-- Seção Pagamento -->
+                            <div class="form-section">
+                                <h3 class="form-section-title"><span class="number">4</span> Forma de Pagamento</h3>
+                                <div class="payment-selector">
+                                    <label class="payment-method-option active">
+                                        <input type="radio" name="payment-method" value="pix" checked>
+                                        <span class="pay-icon">⚡</span>
+                                        <span class="pay-title">PIX (5% de desconto)</span>
+                                    </label>
+                                    <label class="payment-method-option">
+                                        <input type="radio" name="payment-method" value="credit_card">
+                                        <span class="pay-icon">💳</span>
+                                        <span class="pay-title">Cartão de Crédito</span>
+                                    </label>
+                                    <label class="payment-method-option">
+                                        <input type="radio" name="payment-method" value="boleto">
+                                        <span class="pay-icon">📄</span>
+                                        <span class="pay-title">Boleto Bancário</span>
+                                    </label>
+                                </div>
+
+                                <!-- Detalhes Pagamento Pix -->
+                                <div class="payment-details-box active" id="payment-pix-details">
+                                    <p class="payment-description">Aprovação imediata. Escaneie o QR Code abaixo após finalizar o pedido.</p>
+                                    <div class="pix-preview-container">
+                                        <div class="pix-qr-mock">QR CODE PIX</div>
+                                        <div class="pix-copy-paste">
+                                            <input type="text" value="00020126580014br.gov.bcb.pix0136marilene_naumebore_frete_key5802BR5918MARILENE_NAUMEBORE6008BRASILIA62070503MN16304" readonly id="pix-key-input">
+                                            <button type="button" class="btn btn-secondary btn-small" id="copy-pix-btn">Copiar Chave</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Detalhes Pagamento Cartão -->
+                                <div class="payment-details-box" id="payment-card-details">
+                                    <div class="form-grid">
+                                        <div class="form-group col-12">
+                                            <label for="card-number">Número do Cartão</label>
+                                            <input type="text" id="card-number" placeholder="4000 1234 5678 9010">
+                                        </div>
+                                        <div class="form-group col-12">
+                                            <label for="card-name">Nome impresso no Cartão</label>
+                                            <input type="text" id="card-name" placeholder="MARIA S SILVA">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label for="card-expiry">Validade</label>
+                                            <input type="text" id="card-expiry" placeholder="MM/AA">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label for="card-cvv">Código CVV</label>
+                                            <input type="text" id="card-cvv" placeholder="123">
+                                        </div>
+                                        <div class="form-group col-12">
+                                            <label for="card-installments">Parcelamento</label>
+                                            <select id="card-installments">
+                                                <option value="1">1x sem juros</option>
+                                                <option value="2">2x sem juros</option>
+                                                <option value="3">3x sem juros</option>
+                                                <option value="4">4x com juros de 1.99% a.m.</option>
+                                                <option value="6">6x com juros de 1.99% a.m.</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Detalhes Pagamento Boleto -->
+                                <div class="payment-details-box" id="payment-boleto-details">
+                                    <p class="payment-description">O boleto será gerado após a confirmação. O prazo de compensação é de 1 a 2 dias úteis.</p>
+                                    <div class="boleto-alert-box">
+                                        <span>ℹ️</span>
+                                        <p>A postagem do moletom será realizada somente após a confirmação bancária do boleto.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Resumo do Pedido Lateral -->
+                    <div class="checkout-summary-side">
+                        <div class="summary-card">
+                            <h3>Resumo do Pedido</h3>
+                            <div class="checkout-items-list" id="checkout-summary-items">
+                                <!-- Preenchido dinamicamente por JS -->
+                            </div>
+                            
+                            <div class="checkout-totals">
+                                <div class="totals-line">
+                                    <span>Subtotal</span>
+                                    <span id="checkout-subtotal">R$ 0,00</span>
+                                </div>
+                                <div class="totals-line">
+                                    <span>Frete (<span id="shipping-method-name">-</span>)</span>
+                                    <span id="checkout-shipping">R$ 0,00</span>
+                                </div>
+                                <div class="totals-line discount-line" id="discount-row" style="display: none;">
+                                    <span>Desconto PIX (5%)</span>
+                                    <span id="checkout-discount">- R$ 0,00</span>
+                                </div>
+                                <div class="totals-line total-highlight">
+                                    <span>Total Geral</span>
+                                    <span id="checkout-total-price">R$ 0,00</span>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-block btn-large" id="submit-order-btn">
+                                🔒 Finalizar e Pagar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- TELA DE CONFIRMAÇÃO DE PEDIDO -->
+        <div id="confirmation-view" class="view-section">
+            <div class="confirmation-box">
+                <div class="confirmation-success-icon">✓</div>
+                <h1 class="confirmation-title">Pedido Recebido com Sucesso!</h1>
+                <p class="confirmation-subtitle">Agradecemos a sua preferência. A marca de Marilene Naumebore celebra sua compra.</p>
+                
+                <div class="order-info-card">
+                    <p><strong>Código do Pedido:</strong> <span id="conf-order-id">#MN-00000</span></p>
+                    <p><strong>Status de Pagamento:</strong> <span id="conf-payment-status">Aguardando Aprovação</span></p>
+                    <p><strong>Prazo Estimado de Envio:</strong> Até 3 dias úteis após confirmação.</p>
+                </div>
+
+                <div class="delivery-details-box">
+                    <h3>Dados de Entrega</h3>
+                    <p id="conf-customer-address">Carregando endereço...</p>
+                </div>
+
+                <div class="confirmation-actions">
+                    <button class="btn btn-primary" id="conf-back-to-store-btn">Continuar Navegando</button>
+                    <button class="btn btn-secondary" id="conf-admin-view-btn">Ver no Painel Admin</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAINEL ADMINISTRATIVO CONTAINER -->
+        <div id="admin-view" class="view-section">
+            <div class="admin-layout">
+                <!-- Sidebar Lateral Admin -->
+                <aside class="admin-sidebar">
+                    <div class="admin-logo-box">
+                        <span class="admin-brand">MN ADMIN</span>
+                        <span class="admin-subtitle">Gestão de Negócios</span>
+                    </div>
+                    <nav class="admin-sidebar-nav">
+                        <button class="admin-nav-item active" data-tab="admin-dashboard">
+                            <span class="icon">📈</span> Dashboard
+                        </button>
+                        <button class="admin-nav-item" data-tab="admin-orders">
+                            <span class="icon">🛒</span> Pedidos
+                            <span class="admin-badge-count" id="admin-pending-badge">0</span>
+                        </button>
+                        <button class="admin-nav-item" data-tab="admin-stock">
+                            <span class="icon">📦</span> Estoque
+                        </button>
+                        <button class="admin-nav-item exit-btn" id="exit-admin-btn">
+                            <span class="icon">🚪</span> Voltar à Loja
+                        </button>
+                    </nav>
+                </aside>
+
+                <!-- Área de Conteúdo Admin -->
+                <main class="admin-content-area">
+                    <!-- Cabeçalho Admin -->
+                    <header class="admin-content-header">
+                        <h2 id="admin-tab-title">Dashboard</h2>
+                        <div class="admin-user-profile">
+                            <span class="user-role">Administrador</span>
+                            <div class="user-avatar">M</div>
+                        </div>
+                    </header>
+
+                    <!-- Aba: Dashboard -->
+                    <div class="admin-tab-content active" id="admin-dashboard">
+                        <!-- Cards de Métricas -->
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-card-header">
+                                    <span>FATURAMENTO BRUTO</span>
+                                    <span class="card-icon">💰</span>
+                                </div>
+                                <h3 id="metric-revenue">R$ 0,00</h3>
+                                <p class="metric-change positive">Faturamento Total Acumulado</p>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-header">
+                                    <span>PEDIDOS REALIZADOS</span>
+                                    <span class="card-icon">📦</span>
+                                </div>
+                                <h3 id="metric-orders">0</h3>
+                                <p class="metric-change">Pedidos integrados no sistema</p>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-header">
+                                    <span>TICKET MÉDIO</span>
+                                    <span class="card-icon">📊</span>
+                                </div>
+                                <h3 id="metric-ticket">R$ 0,00</h3>
+                                <p class="metric-change">Faturamento dividido por pedidos</p>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-card-header">
+                                    <span>ALERTA DE ESTOQUE</span>
+                                    <span class="card-icon">⚠️</span>
+                                </div>
+                                <h3 id="metric-low-stock">0</h3>
+                                <p class="metric-change negative" id="low-stock-desc">Variações com estoque crítico (&lt; 5)</p>
+                            </div>
+                        </div>
+
+                        <!-- Gráfico de Vendas e Resumo Rápido -->
+                        <div class="admin-grid-two-cols">
+                            <div class="admin-card chart-card">
+                                <div class="admin-card-header">
+                                    <h3>Evolução de Vendas</h3>
+                                    <span class="badge">Últimos Pedidos</span>
+                                </div>
+                                <div class="chart-container" style="position: relative; height:240px; width: 100%;">
+                                    <!-- Renderização gráfica via SVG Inline do JS -->
+                                    <div id="admin-chart-placeholder" class="chart-svg-container">
+                                        <!-- SVG injetado dinamicamente -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="admin-card recent-sales-card">
+                                <div class="admin-card-header">
+                                    <h3>Últimas Vendas</h3>
+                                    <button class="btn btn-secondary btn-small" id="view-all-orders-shortcut">Ver Todos</button>
+                                </div>
+                                <div class="recent-sales-list" id="recent-sales-container">
+                                    <!-- Preenchido dinamicamente por JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aba: Pedidos -->
+                    <div class="admin-tab-content" id="admin-orders">
+                        <div class="admin-card">
+                            <div class="admin-card-header flex-header">
+                                <h3>Gerenciador de Pedidos</h3>
+                                <div class="header-filters">
+                                    <select id="filter-order-status" class="admin-select">
+                                        <option value="all">Todos os Status</option>
+                                        <option value="pending">Pendente</option>
+                                        <option value="preparing">Preparando</option>
+                                        <option value="shipped">Enviado</option>
+                                        <option value="delivered">Entregue</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="admin-table-container">
+                                <table class="admin-table" id="orders-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Pedido ID</th>
+                                            <th>Cliente</th>
+                                            <th>Itens / Variação</th>
+                                            <th>Total (Frete Inc.)</th>
+                                            <th>Envio / Local</th>
+                                            <th>Data</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-orders-tbody">
+                                        <!-- Preenchido dinamicamente por JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aba: Estoque -->
+                    <div class="admin-tab-content" id="admin-stock">
+                        <div class="admin-card">
+                            <div class="admin-card-header flex-header">
+                                <div>
+                                    <h3>Inventário e Estoque de Moletons</h3>
+                                    <p class="admin-card-description">Gerencie as quantidades físicas disponíveis e os valores de venda dos produtos por variação de cor e tamanho.</p>
+                                </div>
+                                <button class="btn btn-primary" id="save-stock-changes-btn">💾 Salvar Alterações de Estoque</button>
+                            </div>
+                            <div class="admin-table-container">
+                                <table class="admin-table" id="stock-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Produto</th>
+                                            <th>Cor</th>
+                                            <th>Tamanho</th>
+                                            <th>Estoque Disponível</th>
+                                            <th>Preço de Venda</th>
+                                            <th>Status de Disponibilidade</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-stock-tbody">
+                                        <!-- Preenchido dinamicamente por JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script de lógica -->
+    <script src="app.js"></script>
+</body>
+</html>

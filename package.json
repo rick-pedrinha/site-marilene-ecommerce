@@ -1,0 +1,16 @@
+{
+  "name": "site-marilene-ecommerce",
+  "version": "1.0.0",
+  "description": "E-commerce e Painel Administrativo da marca Marilene Naumebore",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "ecommerce",
+    "marilene",
+    "naumebore"
+  ],
+  "author": "Antigravity",
+  "license": "ISC"
+}
