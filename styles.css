@@ -2206,3 +2206,338 @@ input:focus, select:focus, textarea:focus {
         grid-column: span 12;
     }
 }
+
+/* ==========================================================================
+   FASE 2: NOVAS ESTILIZAÇÕES (USER AUTH, CHAT & PRODUTOS)
+   ========================================================================== */
+
+/* Botão do Usuário no Cabeçalho */
+.header-action-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--accent-gold) !important;
+    color: var(--accent-gold) !important;
+}
+
+/* Modal de Autenticação */
+#auth-modal .form-grid {
+    gap: 16px;
+}
+
+#auth-modal .form-group input {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-light);
+    width: 100%;
+}
+
+#auth-modal .form-group input:focus {
+    border-color: var(--accent-gold);
+}
+
+/* Área Minha Conta & Pedidos Clientes */
+.customer-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.customer-order-card {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    font-size: 13px;
+    transition: all var(--transition-fast);
+}
+
+.customer-order-card:hover {
+    border-color: var(--border-highlight);
+}
+
+.customer-order-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.customer-order-items {
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.customer-order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ==========================================================================
+   WIDGET DE CHAT (CLIENT SIDE)
+   ========================================================================== */
+.chat-widget {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999;
+    font-family: inherit;
+}
+
+.chat-widget-trigger {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-fast);
+    border: none;
+    position: relative;
+}
+
+.chat-widget-trigger:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
+}
+
+.chat-widget-box {
+    position: absolute;
+    bottom: 72px;
+    right: 0;
+    width: 320px;
+    height: 420px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp var(--transition-fast);
+}
+
+.chat-widget-box.open {
+    display: flex;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-widget-header {
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chat-admin-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chat-admin-avatar {
+    width: 32px;
+    height: 32px;
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-admin-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.chat-admin-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.chat-admin-status {
+    font-size: 10px;
+    color: #4cd964;
+}
+
+.chat-widget-close {
+    font-size: 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+.chat-widget-close:hover {
+    color: var(--text-light);
+}
+
+.chat-widget-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Chat bubble styling */
+.chat-msg {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.chat-msg.msg-left {
+    background-color: var(--bg-tertiary);
+    color: var(--text-light);
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+
+.chat-msg.msg-right {
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+
+.chat-msg-time {
+    display: block;
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 4px;
+    text-align: right;
+}
+
+.chat-msg.msg-right .chat-msg-time {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.chat-widget-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-tertiary);
+    display: flex;
+    gap: 8px;
+}
+
+.chat-widget-input-area input {
+    flex-grow: 1;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.chat-widget-input-area button {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    transition: background-color var(--transition-fast);
+}
+
+.chat-widget-input-area button:hover {
+    background-color: var(--accent-gold-hover);
+}
+
+/* ==========================================================================
+   ADMIN PANEL: CHAT E PRODUTOS STYLING
+   ========================================================================== */
+.admin-chat-threads-list .thread-card {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color var(--transition-fast);
+}
+
+.admin-chat-threads-list .thread-card:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.admin-chat-threads-list .thread-card.active {
+    background-color: rgba(212, 175, 55, 0.05);
+    border-left: 3px solid var(--accent-gold);
+}
+
+.thread-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.thread-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.thread-preview {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.thread-badge {
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Admin Chat Messages Area */
+.admin-chat-messages .chat-msg.msg-left {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-light);
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+}
+
+.admin-chat-messages .chat-msg.msg-right {
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+}
+

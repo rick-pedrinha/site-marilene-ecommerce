@@ -143,11 +143,38 @@ const initialOrders = [
     }
 ];
 
+// Seed do usuário inicial para testes
+const initialUsers = [
+    {
+        name: 'Clara Rodrigues Mendes',
+        email: 'clara.mendes@email.com',
+        password: '123',
+        phone: '(11) 98765-4321',
+        cpf: '123.456.789-00',
+        cep: '01311-200',
+        state: 'SP',
+        city: 'São Paulo',
+        street: 'Avenida Paulista',
+        number: '1000',
+        neighborhood: 'Bela Vista',
+        complement: 'Apto 54'
+    }
+];
+
 // Estado global da aplicação
 let products = [];
 let stock = {};
 let cart = [];
 let orders = [];
+
+// Autenticação
+let users = [];
+let currentUser = null;
+
+// Chat
+let chats = {};
+let activeChatId = null; // ID da conversa selecionada no admin
+let clientChatId = null; // ID da conversa do cliente atual (Email ou ID Visitante)
 
 // Estado da compra atual (Checkout)
 let checkoutShippingState = null; // DF, SP, etc.
@@ -160,14 +187,18 @@ let checkoutDiscount = 0;
    ========================================================================== */
 
 function initApp() {
-    // 1. Carregar produtos
-    products = initialProducts;
+    // 1. Carregar ou inicializar produtos
+    if (localStorage.getItem('mn_products')) {
+        products = JSON.parse(localStorage.getItem('mn_products'));
+    } else {
+        products = initialProducts;
+        localStorage.setItem('mn_products', JSON.stringify(products));
+    }
 
     // 2. Inicializar ou carregar estoque
     if (localStorage.getItem('mn_stock')) {
         stock = JSON.parse(localStorage.getItem('mn_stock'));
     } else {
-        // Criar estoque inicial fictício de 15 unidades por variação
         products.forEach(p => {
             p.colors.forEach(color => {
                 p.sizes.forEach(size => {
@@ -190,17 +221,52 @@ function initApp() {
         saveOrdersToStorage();
     }
 
-    // 4. Carregar carrinho
+    // 4. Inicializar ou carregar usuários cadastrados
+    if (localStorage.getItem('mn_users')) {
+        users = JSON.parse(localStorage.getItem('mn_users'));
+    } else {
+        users = initialUsers;
+        localStorage.setItem('mn_users', JSON.stringify(users));
+    }
+
+    // 5. Carregar usuário logado
+    if (localStorage.getItem('mn_current_user')) {
+        currentUser = JSON.parse(localStorage.getItem('mn_current_user'));
+    }
+
+    // 6. Carregar carrinho
     if (localStorage.getItem('mn_cart')) {
         cart = JSON.parse(localStorage.getItem('mn_cart'));
+    }
+
+    // 7. Carregar conversas do Chat
+    if (localStorage.getItem('mn_chats')) {
+        chats = JSON.parse(localStorage.getItem('mn_chats'));
+    }
+
+    // Gerar ou carregar ID de chat de visitante se não logado
+    if (currentUser) {
+        clientChatId = currentUser.email;
+    } else {
+        if (localStorage.getItem('mn_visitor_id')) {
+            clientChatId = localStorage.getItem('mn_visitor_id');
+        } else {
+            clientChatId = 'visitante_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('mn_visitor_id', clientChatId);
+        }
     }
 
     // Renderizações Iniciais
     renderProductGrid();
     updateCartUI();
+    updateAuthUI();
+    renderClientChat();
     
     // Configurar listeners gerais
     setupEventListeners();
+
+    // Sincronizar chat e dados entre abas em tempo real
+    setInterval(syncRealTimeData, 1500);
 }
 
 function saveStockToStorage() {
@@ -213,6 +279,31 @@ function saveOrdersToStorage() {
 
 function saveCartToStorage() {
     localStorage.setItem('mn_cart', JSON.stringify(cart));
+}
+
+function saveChatsToStorage() {
+    localStorage.setItem('mn_chats', JSON.stringify(chats));
+}
+
+function syncRealTimeData() {
+    // Recarregar chats para atualizar mensagens novas enviadas pelo admin/cliente na outra aba
+    if (localStorage.getItem('mn_chats')) {
+        const localChats = JSON.parse(localStorage.getItem('mn_chats'));
+        // Verificar se houve mudança no tamanho das conversas
+        if (JSON.stringify(localChats) !== JSON.stringify(chats)) {
+            chats = localChats;
+            renderClientChat();
+            
+            // Se estiver na aba Admin de Chat, recarregar visualizações
+            const adminChatTab = document.getElementById('admin-chat');
+            if (adminChatTab && adminChatTab.classList.contains('active')) {
+                renderAdminChatThreads();
+                if (activeChatId) {
+                    renderAdminActiveChat(activeChatId);
+                }
+            }
+        }
+    }
 }
 
 /* ==========================================================================
@@ -379,6 +470,12 @@ function setupEventListeners() {
             } else if (targetTab === 'admin-stock') {
                 titleEl.innerText = 'Estoque e Preços';
                 renderAdminStock();
+            } else if (targetTab === 'admin-products') {
+                titleEl.innerText = 'Catálogo de Produtos';
+                renderAdminProducts();
+            } else if (targetTab === 'admin-chat') {
+                titleEl.innerText = 'Mensagens do Chat';
+                renderAdminChatThreads();
             }
         });
     });
@@ -399,6 +496,81 @@ function setupEventListeners() {
 
     // Filtro de Status na tabela de pedidos
     document.getElementById('filter-order-status').addEventListener('change', renderAdminOrders);
+
+    // ==========================================
+    // LISTENERS FASE 2 (AUTENTICAÇÃO & CHAT)
+    // ==========================================
+    
+    // Abrir/Fechar Modal de Auth
+    document.getElementById('user-btn').addEventListener('click', () => {
+        if (currentUser) {
+            // Abrir Painel Minha Conta
+            renderAccountProfile();
+            navigateTo('account-view');
+        } else {
+            // Abrir Modal de Login
+            openAuthModal();
+        }
+    });
+
+    document.getElementById('close-auth-modal-btn').addEventListener('click', closeAuthModal);
+    
+    // Alternar entre login e cadastro
+    document.getElementById('go-to-register-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('register-container').style.display = 'block';
+    });
+
+    document.getElementById('go-to-login-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('register-container').style.display = 'none';
+        document.getElementById('login-container').style.display = 'block';
+    });
+
+    // Ações de Login e Cadastro
+    document.getElementById('submit-login-btn').addEventListener('click', submitLogin);
+    document.getElementById('submit-register-btn').addEventListener('click', submitRegister);
+    
+    // Sair da conta e Voltar ao perfil
+    document.getElementById('logout-btn').addEventListener('click', logoutUser);
+    document.getElementById('account-back-to-store-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        navigateTo('store-view');
+    });
+
+    // Salvar edições do Perfil
+    document.getElementById('save-profile-btn').addEventListener('click', saveUserProfile);
+
+    // Widget Chat Cliente - Abrir/Fechar
+    const chatTrigger = document.getElementById('chat-widget-trigger');
+    const chatClose = document.getElementById('chat-widget-close-btn');
+    const chatBox = document.getElementById('chat-widget-box');
+
+    chatTrigger.addEventListener('click', () => {
+        chatBox.classList.toggle('open');
+        // Resetar notificações ao abrir
+        document.getElementById('chat-client-badge').style.display = 'none';
+    });
+
+    chatClose.addEventListener('click', () => {
+        chatBox.classList.remove('open');
+    });
+
+    // Enviar mensagem no Chat Cliente
+    document.getElementById('chat-widget-send-btn').addEventListener('click', sendClientChatMessage);
+    document.getElementById('chat-widget-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendClientChatMessage();
+    });
+
+    // Cadastrar Novo Produto
+    document.getElementById('submit-new-product-btn').addEventListener('click', addProductToCatalog);
+
+    // Enviar mensagem Chat Admin
+    document.getElementById('admin-chat-send-btn').addEventListener('click', sendAdminChatMessage);
+    document.getElementById('admin-chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendAdminChatMessage();
+    });
 }
 
 /* ==========================================================================
@@ -422,7 +594,7 @@ function renderProductGrid() {
             });
         });
 
-        // Imagem principal padrão (Branca ou Preta)
+        // Imagem principal padrão
         const displayImage = `${p.imagePrefix}_branco.jpg`;
 
         const card = document.createElement('div');
@@ -430,7 +602,7 @@ function renderProductGrid() {
         card.innerHTML = `
             <div class="product-card-image-box">
                 <img src="${displayImage}" alt="${p.name}" class="product-card-img" onerror="this.src='https://placehold.co/400x400?text=Moletom+Marilene'">
-                <span class="product-card-badge">${p.tag}</span>
+                <span class="product-card-badge">${p.tag || 'Exclusivo'}</span>
             </div>
             <div class="product-card-content">
                 <h3 class="product-card-title">${p.name}</h3>
@@ -461,7 +633,6 @@ function openProductModal(productId) {
         const currentPrice = stock[stockKey] ? stock[stockKey].price : p.basePrice;
         const imgPath = `${p.imagePrefix}_${selectedColor.toLowerCase()}.jpg`;
 
-        // Renderizar conteúdo dinamicamente
         modalContent.innerHTML = `
             <!-- Lado Imagem -->
             <div class="modal-image-side">
@@ -471,7 +642,7 @@ function openProductModal(productId) {
             <!-- Lado Informações -->
             <div class="modal-content-side">
                 <div>
-                    <span class="modal-product-tag">${p.tag}</span>
+                    <span class="modal-product-tag">${p.tag || 'Novidade'}</span>
                     <h2 class="modal-product-title">${p.name}</h2>
                 </div>
                 <div class="modal-product-price" id="modal-price-display">R$ ${currentPrice.toFixed(2).replace('.', ',')}</div>
@@ -530,22 +701,18 @@ function openProductModal(productId) {
         `;
 
         // Ativar Listeners Internos do Modal
-        
-        // Clique nas cores
         modalContent.querySelectorAll('.color-option').forEach(el => {
             el.addEventListener('click', function() {
                 selectedColor = this.getAttribute('data-color');
-                // Se o tamanho atual não estiver disponível na nova cor, seleciona o primeiro tamanho disponível
                 const testKey = `${p.id}_${selectedColor}_${selectedSize}`;
                 if (!stock[testKey] || stock[testKey].qty <= 0) {
-                    const firstAvail = p.sizes.find(s => stock[`${p.id}_${selectedColor}_${s}`].qty > 0);
+                    const firstAvail = p.sizes.find(s => stock[`${p.id}_${selectedColor}_${s}`] && stock[`${p.id}_${selectedColor}_${s}`].qty > 0);
                     if (firstAvail) selectedSize = firstAvail;
                 }
                 updateModalView();
             });
         });
 
-        // Clique nos tamanhos
         modalContent.querySelectorAll('.choice-option').forEach(el => {
             el.addEventListener('click', function() {
                 selectedSize = this.getAttribute('data-size');
@@ -553,24 +720,18 @@ function openProductModal(productId) {
             });
         });
 
-        // Contador de quantidade
         const qtyInput = modalContent.querySelector('#qty-number-input');
         
         modalContent.querySelector('#qty-minus').addEventListener('click', () => {
             let val = parseInt(qtyInput.value) || 1;
-            if (val > 1) {
-                qtyInput.value = val - 1;
-            }
+            if (val > 1) qtyInput.value = val - 1;
         });
 
         modalContent.querySelector('#qty-plus').addEventListener('click', () => {
             let val = parseInt(qtyInput.value) || 1;
-            if (val < currentStock) {
-                qtyInput.value = val + 1;
-            }
+            if (val < currentStock) qtyInput.value = val + 1;
         });
 
-        // Prevenir inserção manual de quantidade inválida
         qtyInput.addEventListener('change', function() {
             let val = parseInt(this.value) || 1;
             if (val < 1) val = 1;
@@ -578,7 +739,6 @@ function openProductModal(productId) {
             this.value = val;
         });
 
-        // Botão Adicionar ao Carrinho
         modalContent.querySelector('#modal-add-to-cart-btn').addEventListener('click', () => {
             const qty = parseInt(qtyInput.value) || 1;
             addToCart(p.id, p.name, selectedColor, selectedSize, qty, currentPrice);
@@ -605,7 +765,6 @@ function getQtyStatusHtml(qty) {
    ========================================================================== */
 
 function addToCart(productId, name, color, size, qty, price) {
-    // Verificar se o item com mesma variação já existe no carrinho
     const existingIndex = cart.findIndex(item => 
         item.productId === productId && item.color === color && item.size === size
     );
@@ -631,7 +790,6 @@ function addToCart(productId, name, color, size, qty, price) {
     saveCartToStorage();
     updateCartUI();
     
-    // Abrir o carrinho automaticamente ao adicionar item
     document.getElementById('cart-drawer').classList.add('open');
     document.getElementById('cart-drawer-overlay').classList.add('open');
 }
@@ -644,11 +802,9 @@ function updateCartUI() {
 
     if (!badge || !container) return;
 
-    // Calcular quantidade total de itens no carrinho
     const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
     badge.innerText = totalItems;
 
-    // Se estiver vazio
     if (cart.length === 0) {
         container.innerHTML = `<p class="placeholder-text">Seu carrinho está vazio. Adicione um moletom autoral!</p>`;
         subtotalEl.innerText = 'R$ 0,00';
@@ -664,7 +820,7 @@ function updateCartUI() {
     cart.forEach((item, index) => {
         const itemTotal = item.price * item.qty;
         subtotal += itemTotal;
-        const imgPath = `assets/hoodie_${item.productId === 'maria' ? 'maria' : 'quem_protege'}_${item.color.toLowerCase()}.jpg`;
+        const imgPath = `assets/hoodie_${item.productId === 'maria' ? 'maria' : (item.productId === 'quem-protege' ? 'quem_protege' : 'quem_protege')}_${item.color.toLowerCase()}.jpg`;
         const stockKey = `${item.productId}_${item.color}_${item.size}`;
         const maxStock = stock[stockKey] ? stock[stockKey].qty : 0;
 
@@ -732,11 +888,9 @@ function calculateFreight() {
         return;
     }
 
-    // Identificar o estado pelo prefixo do CEP
     const cepNum = parseInt(cepInput);
     let state = '';
 
-    // Mapeamento simplificado de CEPs no Brasil
     if (cepNum >= 1000000 && cepNum <= 19999999) state = 'SP';
     else if (cepNum >= 20000000 && cepNum <= 28999999) state = 'RJ';
     else if (cepNum >= 29000000 && cepNum <= 29999999) state = 'ES';
@@ -766,13 +920,12 @@ function calculateFreight() {
     else if (cepNum >= 80000000 && cepNum <= 87999999) state = 'PR';
     else if (cepNum >= 88000000 && cepNum <= 89999999) state = 'SC';
     else if (cepNum >= 90000000 && cepNum <= 99999999) state = 'RS';
-    else state = 'DF'; // Fallback Distrito Federal
+    else state = 'DF';
 
     checkoutShippingState = state;
     const rule = shippingRates[state];
     stateInput.value = `${state} - ${rule.region}`;
 
-    // Renderizar as opções de envio
     container.innerHTML = `
         <div class="shipping-option-card active" onclick="selectShippingOption('PAC', ${rule.pac.price})">
             <div class="shipping-option-left">
@@ -797,7 +950,6 @@ function calculateFreight() {
         </div>
     `;
 
-    // Seleção padrão do primeiro
     selectShippingOption('PAC', rule.pac.price);
 }
 
@@ -805,7 +957,6 @@ function selectShippingOption(method, price) {
     checkoutShippingMethod = method;
     checkoutShippingCost = price;
     
-    // Atualizar estilo visual dos cards
     const cards = document.querySelectorAll('.shipping-option-card');
     cards.forEach(card => {
         card.classList.remove('active');
@@ -843,6 +994,25 @@ function renderCheckoutSummary() {
     });
 
     document.getElementById('checkout-subtotal').innerText = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+
+    // Autopreenchimento se o usuário estiver logado
+    if (currentUser) {
+        document.getElementById('cust-name').value = currentUser.name || '';
+        document.getElementById('cust-email').value = currentUser.email || '';
+        document.getElementById('cust-phone').value = currentUser.phone || '';
+        document.getElementById('cust-cpf').value = currentUser.cpf || '';
+        document.getElementById('cust-cep').value = currentUser.cep || '';
+        document.getElementById('cust-street').value = currentUser.street || '';
+        document.getElementById('cust-number').value = currentUser.number || '';
+        document.getElementById('cust-neighborhood').value = currentUser.neighborhood || '';
+        document.getElementById('cust-city').value = currentUser.city || '';
+        
+        // Se tem CEP cadastrado, calcula frete
+        if (currentUser.cep) {
+            calculateFreight();
+        }
+    }
+
     calculateTotalCheckout();
 }
 
@@ -850,7 +1020,6 @@ function calculateTotalCheckout() {
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
     
-    // Desconto Pix de 5%
     const discountRow = document.getElementById('discount-row');
     if (paymentMethod === 'pix') {
         checkoutDiscount = subtotal * 0.05;
@@ -873,7 +1042,6 @@ function calculateTotalCheckout() {
    ========================================================================== */
 
 function submitOrder() {
-    // Validar formulário
     const name = document.getElementById('cust-name').value;
     const email = document.getElementById('cust-email').value;
     const phone = document.getElementById('cust-phone').value;
@@ -896,7 +1064,6 @@ function submitOrder() {
         return;
     }
 
-    // Validar estoque disponível antes de fechar pedido
     let stockValid = true;
     cart.forEach(item => {
         const key = `${item.productId}_${item.color}_${item.size}`;
@@ -908,19 +1075,16 @@ function submitOrder() {
 
     if (!stockValid) return;
 
-    // Subtrair do estoque
     cart.forEach(item => {
         const key = `${item.productId}_${item.color}_${item.size}`;
         stock[key].qty -= item.qty;
     });
     saveStockToStorage();
 
-    // Calcular Valores Finais
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
     const total = subtotal + checkoutShippingCost - checkoutDiscount;
 
-    // Criar Objeto Pedido
     const orderId = `#MN-${Math.floor(10000 + Math.random() * 90000)}`;
     const newOrder = {
         id: orderId,
@@ -938,22 +1102,519 @@ function submitOrder() {
         status: 'pending'
     };
 
-    // Adicionar aos pedidos
     orders.unshift(newOrder);
     saveOrdersToStorage();
 
-    // Limpar Carrinho
     cart = [];
     saveCartToStorage();
     updateCartUI();
 
-    // Atualizar UI de Confirmação
     document.getElementById('conf-order-id').innerText = orderId;
     document.getElementById('conf-payment-status').innerText = paymentMethod === 'pix' ? 'Aguardando Pagamento Pix' : (paymentMethod === 'boleto' ? 'Aguardando Compensação Boleto' : 'Confirmado (Cartão)');
     document.getElementById('conf-customer-address').innerText = `${street}, Nº ${number} ${complement ? '- ' + complement : ''} | ${neighborhood} - ${city}, ${checkoutShippingState} - CEP ${cep}`;
 
-    // Ir para Confirmação
     navigateTo('confirmation-view');
+}
+
+/* ==========================================================================
+   FASE 2: AUTENTICAÇÃO DE USUÁRIOS
+   ========================================================================== */
+
+function openAuthModal() {
+    document.getElementById('auth-modal').classList.add('active');
+    document.getElementById('login-container').style.display = 'block';
+    document.getElementById('register-container').style.display = 'none';
+}
+
+function closeAuthModal() {
+    document.getElementById('auth-modal').classList.remove('active');
+}
+
+function updateAuthUI() {
+    const badge = document.getElementById('user-name-badge');
+    if (currentUser) {
+        const firstName = currentUser.name.split(' ')[0];
+        badge.innerText = `Olá, ${firstName}`;
+    } else {
+        badge.innerText = 'Entrar';
+    }
+}
+
+function submitRegister() {
+    const name = document.getElementById('reg-name').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+    const cpf = document.getElementById('reg-cpf').value;
+    const phone = document.getElementById('reg-phone').value;
+
+    if (!name || !email || !password || !cpf || !phone) {
+        alert('Por favor, preencha todos os campos do cadastro.');
+        return;
+    }
+
+    const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+    if (exists) {
+        alert('Este e-mail já está cadastrado.');
+        return;
+    }
+
+    const newUser = {
+        name, email, password, cpf, phone,
+        cep: '', state: '', city: '', street: '', number: '', neighborhood: '', complement: ''
+    };
+
+    users.push(newUser);
+    localStorage.setItem('mn_users', JSON.stringify(users));
+
+    currentUser = newUser;
+    localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
+    
+    // Associar chat ao e-mail
+    const visitorId = localStorage.getItem('mn_visitor_id');
+    if (visitorId && chats[visitorId]) {
+        chats[email] = chats[visitorId];
+        delete chats[visitorId];
+        saveChatsToStorage();
+    }
+    clientChatId = email;
+
+    updateAuthUI();
+    closeAuthModal();
+    alert('Cadastro realizado com sucesso!');
+}
+
+function submitLogin() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    if (!email || !password) {
+        alert('Por favor, insira e-mail e senha.');
+        return;
+    }
+
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    
+    if (user) {
+        currentUser = user;
+        localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
+
+        // Mesclar chat do visitante com o da conta logada
+        const visitorId = localStorage.getItem('mn_visitor_id');
+        if (visitorId && chats[visitorId]) {
+            if (!chats[email]) chats[email] = [];
+            chats[email] = [...chats[email], ...chats[visitorId]];
+            delete chats[visitorId];
+            saveChatsToStorage();
+        }
+        clientChatId = email;
+
+        updateAuthUI();
+        closeAuthModal();
+    } else {
+        alert('E-mail ou senha incorretos.');
+    }
+}
+
+function logoutUser() {
+    currentUser = null;
+    localStorage.removeItem('mn_current_user');
+    
+    // Gerar novo ID de visitante para chat
+    clientChatId = 'visitante_' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('mn_visitor_id', clientChatId);
+
+    updateAuthUI();
+    navigateTo('store-view');
+}
+
+function renderAccountProfile() {
+    if (!currentUser) return;
+
+    document.getElementById('prof-name').value = currentUser.name || '';
+    document.getElementById('prof-email').value = currentUser.email || '';
+    document.getElementById('prof-phone').value = currentUser.phone || '';
+    document.getElementById('prof-cpf').value = currentUser.cpf || '';
+    document.getElementById('prof-cep').value = currentUser.cep || '';
+    document.getElementById('prof-street').value = currentUser.street || '';
+    document.getElementById('prof-number').value = currentUser.number || '';
+    document.getElementById('prof-neighborhood').value = currentUser.neighborhood || '';
+    document.getElementById('prof-city').value = currentUser.city || '';
+    document.getElementById('prof-complement').value = currentUser.complement || '';
+    document.getElementById('prof-state').value = currentUser.state || '';
+
+    // Renderizar histórico de pedidos do cliente
+    renderCustomerOrdersHistory();
+}
+
+function saveUserProfile() {
+    if (!currentUser) return;
+
+    currentUser.name = document.getElementById('prof-name').value;
+    currentUser.phone = document.getElementById('prof-phone').value;
+    currentUser.cpf = document.getElementById('prof-cpf').value;
+    currentUser.cep = document.getElementById('prof-cep').value;
+    currentUser.street = document.getElementById('prof-street').value;
+    currentUser.number = document.getElementById('prof-number').value;
+    currentUser.neighborhood = document.getElementById('prof-neighborhood').value;
+    currentUser.city = document.getElementById('prof-city').value;
+    currentUser.complement = document.getElementById('prof-complement').value;
+    currentUser.state = document.getElementById('prof-state').value;
+
+    // Atualizar na lista geral de usuários
+    const idx = users.findIndex(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
+    if (idx > -1) {
+        users[idx] = currentUser;
+    }
+    
+    localStorage.setItem('mn_users', JSON.stringify(users));
+    localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
+    
+    updateAuthUI();
+    alert('Dados de perfil atualizados com sucesso!');
+}
+
+function renderCustomerOrdersHistory() {
+    const container = document.getElementById('customer-orders-container');
+    if (!container) return;
+
+    // Filtrar pedidos pelo e-mail do cliente
+    const myOrders = orders.filter(o => o.customer.email.toLowerCase() === currentUser.email.toLowerCase());
+
+    if (myOrders.length === 0) {
+        container.innerHTML = `<p class="placeholder-text" style="border:none;">Você ainda não realizou nenhum pedido.</p>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    myOrders.forEach(o => {
+        const dateObj = new Date(o.date);
+        const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
+        
+        const card = document.createElement('div');
+        card.className = 'customer-order-card';
+        card.innerHTML = `
+            <div class="customer-order-header">
+                <span class="order-id-label">${o.id}</span>
+                <span>${formattedDate}</span>
+            </div>
+            <div class="customer-order-items">
+                ${o.items.map(item => `
+                    <div>${item.name} (${item.color} - ${item.size}) x${item.qty}</div>
+                `).join('')}
+            </div>
+            <div class="customer-order-footer">
+                <span>Total: <strong>R$ ${o.totalPrice.toFixed(2).replace('.', ',')}</strong></span>
+                <span class="status-badge ${getStatusBadgeClass(o.status)}">${getStatusLabel(o.status)}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+/* ==========================================================================
+   FASE 2: SISTEMA DE CHAT DE SUPORTE
+   ========================================================================== */
+
+function renderClientChat() {
+    const container = document.getElementById('chat-widget-messages-container');
+    if (!container) return;
+
+    const thread = chats[clientChatId] || [];
+
+    // Se estiver vazio, exibir boas-vindas inicial de Marilene
+    if (thread.length === 0) {
+        container.innerHTML = `
+            <div class="chat-msg msg-left">
+                Olá! Sou Marilene Naumebore. Agradecemos o contato! Como posso ajudar você hoje em relação aos moletons ou envio?
+                <span class="chat-msg-time">${getCurrentTimeStr()}</span>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+    thread.forEach(msg => {
+        const msgType = msg.sender === 'client' ? 'msg-right' : 'msg-left';
+        
+        const div = document.createElement('div');
+        div.className = `chat-msg ${msgType}`;
+        div.innerHTML = `
+            ${msg.text}
+            <span class="chat-msg-time">${msg.time}</span>
+        `;
+        container.appendChild(div);
+    });
+
+    // Scroll para a última mensagem
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendClientChatMessage() {
+    const input = document.getElementById('chat-widget-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (!chats[clientChatId]) {
+        chats[clientChatId] = [];
+    }
+
+    const newMsg = {
+        sender: 'client',
+        text: text,
+        time: getCurrentTimeStr(),
+        senderName: currentUser ? currentUser.name : 'Visitante'
+    };
+
+    chats[clientChatId].push(newMsg);
+    saveChatsToStorage();
+    renderClientChat();
+    input.value = '';
+
+    // Simular resposta automática no primeiro contato do cliente
+    if (chats[clientChatId].filter(m => m.sender === 'client').length === 1) {
+        setTimeout(() => {
+            const supportReply = {
+                sender: 'support',
+                text: 'Recebemos sua mensagem! Um de nossos atendentes irá analisar sua solicitação e responderá o mais breve possível. Muito obrigada pelo contato!',
+                time: getCurrentTimeStr(),
+                senderName: 'Suporte Marilene'
+            };
+            chats[clientChatId].push(supportReply);
+            saveChatsToStorage();
+            renderClientChat();
+            
+            // Tocar som de notificação fictício ou animar widget
+            document.getElementById('chat-client-badge').innerText = '1';
+            document.getElementById('chat-client-badge').style.display = 'flex';
+        }, 1500);
+    }
+}
+
+function getCurrentTimeStr() {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+}
+
+/* Chat Administrativo */
+function renderAdminChatThreads() {
+    const container = document.getElementById('admin-chat-threads-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const activeThreads = Object.keys(chats);
+
+    if (activeThreads.length === 0) {
+        container.innerHTML = `<p class="placeholder-text" style="border:none; margin: 20px;">Nenhuma conversa iniciada ainda.</p>`;
+        return;
+    }
+
+    // Contagem total de threads não respondidas
+    let totalUnreadChats = 0;
+
+    activeThreads.forEach(chatId => {
+        const messages = chats[chatId];
+        const lastMsg = messages[messages.length - 1];
+        if (!lastMsg) return;
+
+        // Se a última mensagem veio do cliente, conta como unread para o admin
+        const isUnread = lastMsg.sender === 'client';
+        if (isUnread) totalUnreadChats++;
+
+        const senderName = lastMsg.senderName || (chatId.startsWith('visitante_') ? 'Visitante Fictício' : chatId);
+
+        const card = document.createElement('div');
+        card.className = `thread-card ${chatId === activeChatId ? 'active' : ''}`;
+        card.innerHTML = `
+            <div class="thread-details">
+                <span class="thread-name">${senderName}</span>
+                <span class="thread-preview">${lastMsg.text}</span>
+            </div>
+            ${isUnread ? `<span class="thread-badge">!</span>` : ''}
+        `;
+        card.addEventListener('click', () => {
+            activeChatId = chatId;
+            renderAdminChatThreads();
+            renderAdminActiveChat(chatId);
+        });
+
+        container.appendChild(card);
+    });
+
+    // Atualizar badge no menu admin
+    const chatMenuBadge = document.getElementById('admin-chat-badge');
+    chatMenuBadge.innerText = totalUnreadChats;
+    chatMenuBadge.style.display = totalUnreadChats > 0 ? 'inline-block' : 'none';
+}
+
+function renderAdminActiveChat(chatId) {
+    const header = document.getElementById('admin-chat-active-header');
+    const container = document.getElementById('admin-chat-messages-container');
+    const inputWrapper = document.getElementById('admin-chat-input-wrapper');
+
+    if (!container || !header) return;
+
+    const messages = chats[chatId] || [];
+    const clientName = messages[0] ? (messages.find(m => m.sender === 'client')?.senderName || chatId) : chatId;
+
+    header.innerText = `Atendimento: ${clientName} (${chatId})`;
+    inputWrapper.style.display = 'flex';
+
+    container.innerHTML = '';
+    messages.forEach(msg => {
+        const msgType = msg.sender === 'support' ? 'msg-right' : 'msg-left';
+        
+        const div = document.createElement('div');
+        div.className = `chat-msg ${msgType}`;
+        div.innerHTML = `
+            <strong>${msg.sender === 'support' ? 'Suporte' : (msg.senderName || 'Cliente')}:</strong><br>
+            ${msg.text}
+            <span class="chat-msg-time">${msg.time}</span>
+        `;
+        container.appendChild(div);
+    });
+
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendAdminChatMessage() {
+    const input = document.getElementById('admin-chat-input');
+    const text = input.value.trim();
+    if (!text || !activeChatId) return;
+
+    const newMsg = {
+        sender: 'support',
+        text: text,
+        time: getCurrentTimeStr(),
+        senderName: 'Suporte Marilene'
+    };
+
+    chats[activeChatId].push(newMsg);
+    saveChatsToStorage();
+    renderAdminActiveChat(activeChatId);
+    input.value = '';
+    
+    // Atualizar threads da sidebar
+    renderAdminChatThreads();
+}
+
+/* ==========================================================================
+   FASE 2: GERENCIAMENTO DE PRODUTOS
+   ========================================================================== */
+
+function renderAdminProducts() {
+    const tbody = document.getElementById('admin-products-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    products.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <img src="${p.imagePrefix}_branco.jpg" alt="${p.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm);" onerror="this.src='https://placehold.co/100x100?text=MN'">
+            </td>
+            <td><strong>${p.name}</strong></td>
+            <td>R$ ${p.basePrice.toFixed(2).replace('.', ',')}</td>
+            <td><span class="status-badge status-delivered">${p.tag || 'Comum'}</span></td>
+            <td>
+                <div class="actions-cell">
+                    <button class="btn btn-secondary btn-small" onclick="deleteProductFromCatalog('${p.id}')" style="color:var(--accent-terracota); border-color:rgba(200,90,68,0.2);">Excluir</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addProductToCatalog() {
+    const name = document.getElementById('new-prod-name').value.trim();
+    const price = parseFloat(document.getElementById('new-prod-price').value);
+    const tag = document.getElementById('new-prod-tag').value.trim();
+    const description = document.getElementById('new-prod-desc').value.trim();
+
+    if (!name || isNaN(price) || !description) {
+        alert('Por favor, preencha os campos obrigatórios (Nome, Preço de Venda e Descrição).');
+        return;
+    }
+
+    // Cores selecionadas
+    const colorEls = document.querySelectorAll('input[name="new-prod-colors"]:checked');
+    const selectedColors = Array.from(colorEls).map(el => el.value);
+
+    // Tamanhos selecionados
+    const sizeEls = document.querySelectorAll('input[name="new-prod-sizes"]:checked');
+    const selectedSizes = Array.from(sizeEls).map(el => el.value);
+
+    if (selectedColors.length === 0 || selectedSizes.length === 0) {
+        alert('Selecione pelo menos uma Cor e um Tamanho disponível para o produto.');
+        return;
+    }
+
+    // Gerar ID simplificado a partir do nome
+    const id = name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+    const exists = products.some(p => p.id === id);
+    if (exists) {
+        alert('Já existe um produto cadastrado com este nome.');
+        return;
+    }
+
+    // Criar Objeto Produto
+    const newProduct = {
+        id,
+        name,
+        basePrice: price,
+        description,
+        imagePrefix: 'assets/hoodie_quem_protege', // Fallback para moletom padrão
+        colors: selectedColors,
+        sizes: selectedSizes,
+        tag: tag || 'Lançamento'
+    };
+
+    // Adicionar ao array global
+    products.push(newProduct);
+    localStorage.setItem('mn_products', JSON.stringify(products));
+
+    // Inicializar estoque padrão (15 unidades) para as novas variações
+    selectedColors.forEach(color => {
+        selectedSizes.forEach(size => {
+            const key = `${id}_${color}_${size}`;
+            stock[key] = {
+                qty: 15,
+                price: price
+            };
+        });
+    });
+    saveStockToStorage();
+
+    // Limpar formulário
+    document.getElementById('add-product-form').reset();
+
+    // Recarregar grids
+    renderProductGrid();
+    renderAdminProducts();
+    alert(`Moletom "${name}" adicionado com sucesso ao catálogo!`);
+}
+
+function deleteProductFromCatalog(productId) {
+    if (confirm('Deseja realmente excluir este produto e todas as suas variações de estoque?')) {
+        // Remover produto
+        products = products.filter(p => p.id !== productId);
+        localStorage.setItem('mn_products', JSON.stringify(products));
+
+        // Limpar variações de estoque associadas a esse produto
+        Object.keys(stock).forEach(key => {
+            if (key.startsWith(productId + '_')) {
+                delete stock[key];
+            }
+        });
+        saveStockToStorage();
+
+        // Recarregar
+        renderProductGrid();
+        renderAdminProducts();
+    }
 }
 
 /* ==========================================================================
@@ -962,19 +1623,15 @@ function submitOrder() {
 
 function enterAdminPanel() {
     navigateTo('admin-view');
-    
-    // Simular clique na primeira tab (Dashboard) para carregar
     const dashboardTab = document.querySelector('[data-tab="admin-dashboard"]');
     if (dashboardTab) dashboardTab.click();
 }
 
 function renderAdminDashboard() {
-    // 1. Calcular Métricas
     const totalRevenue = orders.reduce((acc, o) => acc + o.totalPrice, 0);
     const totalOrders = orders.length;
     const ticket = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
     
-    // Contagem de estoque baixo
     let lowStockCount = 0;
     Object.keys(stock).forEach(key => {
         if (stock[key].qty < 5) lowStockCount++;
@@ -994,7 +1651,6 @@ function renderAdminDashboard() {
         lowStockDesc.className = 'metric-change positive';
     }
 
-    // 2. Renderizar últimas vendas (Top 5)
     const recentSalesContainer = document.getElementById('recent-sales-container');
     recentSalesContainer.innerHTML = '';
     
@@ -1022,7 +1678,6 @@ function renderAdminDashboard() {
         });
     }
 
-    // 3. Desenhar Gráfico SVG
     renderDashboardChart();
 }
 
@@ -1050,11 +1705,8 @@ function renderDashboardChart() {
     const container = document.getElementById('admin-chart-placeholder');
     if (!container) return;
 
-    // Criar um histórico fictício baseado nos pedidos reais ou sementes para preencher o gráfico
-    // Vamos agrupar os últimos 7 dias de vendas
     const chartData = [1200, 1850, 1500, 2400, 3100, 2800, 0];
     
-    // Substituir o último valor de hoje pela soma de pedidos de hoje
     const today = new Date();
     let todaySum = 0;
     orders.forEach(o => {
@@ -1063,14 +1715,12 @@ function renderDashboardChart() {
             todaySum += o.totalPrice;
         }
     });
-    chartData[6] = Math.max(todaySum, 150); // Mínimo de R$ 150 para renderizar linha bonita
+    chartData[6] = Math.max(todaySum, 150);
 
-    // Construção do Gráfico SVG
     const width = 500;
     const height = 200;
     const padding = 30;
     
-    // Encontrar escala
     const maxVal = Math.max(...chartData) * 1.1;
     const points = chartData.map((val, idx) => {
         const x = padding + (idx * (width - (padding * 2)) / (chartData.length - 1));
@@ -1091,18 +1741,13 @@ function renderDashboardChart() {
                     <stop offset="100%" stop-color="#d4af37" stop-opacity="0.0"/>
                 </linearGradient>
             </defs>
-            <!-- Linhas de Grade de Fundo -->
             <line x1="${padding}" y1="${padding}" x2="${width - padding}" y2="${padding}" class="chart-grid-line" />
             <line x1="${padding}" y1="${(height - padding * 2) / 2 + padding}" x2="${width - padding}" y2="${(height - padding * 2) / 2 + padding}" class="chart-grid-line" />
             <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" class="chart-grid-line" style="stroke: rgba(255,255,255,0.15);" />
             
-            <!-- Área Preenchida -->
             <path d="${areaD}" fill="url(#chart-gradient)" />
-            
-            <!-- Linha Principal -->
             <path d="${pathD}" class="chart-line" />
             
-            <!-- Pontos e Textos -->
             ${points.map((p, idx) => `
                 <circle cx="${p.x}" cy="${p.y}" r="4" fill="#d4af37" stroke="#121216" stroke-width="2" />
                 <text x="${p.x}" y="${height - 10}" text-anchor="middle" class="chart-label">${daysOfWeek[idx]}</text>
@@ -1119,7 +1764,6 @@ function renderAdminOrders() {
     
     if (!tbody) return;
 
-    // Atualizar badge de pedidos pendentes
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     pendingBadge.innerText = pendingCount;
     pendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
@@ -1180,13 +1824,11 @@ function updateOrderStatus(orderId, newStatus) {
     if (o) {
         o.status = newStatus;
         saveOrdersToStorage();
-        // Recarregar pedidos pendentes badge no menu
         const pendingCount = orders.filter(ord => ord.status === 'pending').length;
         const pendingBadge = document.getElementById('admin-pending-badge');
         pendingBadge.innerText = pendingCount;
         pendingBadge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
         
-        // Se estiver na aba Dashboard, recarregar
         if (document.getElementById('admin-dashboard').classList.contains('active')) {
             renderAdminDashboard();
         }
@@ -1270,11 +1912,7 @@ function saveAdminStockChanges() {
 
     saveStockToStorage();
     alert('Alterações de estoque e preços salvas com sucesso!');
-    
-    // Atualizar vitrine para refletir preços novos
     renderProductGrid();
-    
-    // Recarregar tabela de estoque
     renderAdminStock();
 }
 
