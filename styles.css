@@ -305,9 +305,9 @@ input:focus, select:focus, textarea:focus {
     position: relative;
     height: 85vh;
     min-height: 550px;
-    background-image: url('assets/marilene_banner.jpg');
+    background-image: url('assets/marilene_black_double.jpg');
     background-size: cover;
-    background-position: center 20%;
+    background-position: center 34%;
     display: flex;
     align-items: center;
     padding-top: 80px;
