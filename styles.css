@@ -305,9 +305,9 @@ input:focus, select:focus, textarea:focus {
     position: relative;
     height: 85vh;
     min-height: 550px;
-    background-image: url('assets/marilene_black_double.jpg');
+    background-image: url('assets/marilene_white_front.jpg');
     background-size: cover;
-    background-position: center 34%;
+    background-position: center 12%;
     display: flex;
     align-items: center;
     padding-top: 80px;
@@ -359,8 +359,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .purchase-confidence {
-    max-width: 1160px;
-    margin: -34px auto 0;
+    width: 100%;
+    margin: 0 0 56px;
     position: relative;
     z-index: 3;
     background: #f4efe4;
@@ -2223,7 +2223,7 @@ input:focus, select:focus, textarea:focus {
 /* Responsive fixes */
 @media (max-width: 900px) {
     .purchase-confidence {
-        margin: 0;
+        margin: 0 0 44px;
         border-radius: 0;
         grid-template-columns: repeat(3, 1fr);
     }
@@ -2277,7 +2277,7 @@ input:focus, select:focus, textarea:focus {
         padding: 60px 15px;
     }
 
-    .purchase-confidence { grid-template-columns: 1fr; padding: 24px 20px; gap: 16px; }
+    .purchase-confidence { grid-template-columns: 1fr; padding: 24px 20px; gap: 16px; margin-bottom: 36px; }
     .confidence-cta { grid-column: auto; text-align: left; border-top: 1px solid rgba(0,0,0,.12); padding-top: 16px; }
     .products-grid { grid-template-columns: 1fr; gap: 24px; }
     .product-card-footer { align-items: flex-end; gap: 12px; }
