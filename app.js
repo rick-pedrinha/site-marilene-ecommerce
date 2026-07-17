@@ -163,6 +163,16 @@ const initialUsers = [
     }
 ];
 
+// Acesso administrativo interno. A senha nunca fica salva em texto aberto.
+const siteAdminAccount = Object.freeze({
+    name: 'Rick Pedrinha',
+    email: 'rickpedrinha@sempreceub.com',
+    passwordHash: '601241ad8c2ced864c143f7e0a6e69249ff6e265df5b2c4c83465d7eda290731',
+    role: 'admin',
+    phone: '', cpf: '', cep: '', state: '', city: '', street: '',
+    number: '', neighborhood: '', complement: ''
+});
+
 // Estado global da aplicação
 let products = [];
 let stock = {};
@@ -172,6 +182,7 @@ let orders = [];
 // Autenticação
 let users = [];
 let currentUser = null;
+let adminSessionActive = false;
 
 // Chat
 let chats = {};
@@ -1206,6 +1217,12 @@ function closeAuthModal() {
 
 function updateAuthUI() {
     const badge = document.getElementById('user-name-badge');
+    const hasAdminAccess = adminSessionActive && currentUser?.role === 'admin';
+    ['go-to-admin-btn', 'footer-admin-link', 'conf-admin-view-btn'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.hidden = !hasAdminAccess;
+    });
+
     if (currentUser) {
         const firstName = currentUser.name.split(' ')[0];
         badge.innerText = `Olá, ${firstName}`;
@@ -1223,6 +1240,11 @@ function submitRegister() {
 
     if (!name || !email || !password || !cpf || !phone) {
         alert('Por favor, preencha todos os campos do cadastro.');
+        return;
+    }
+
+    if (email.trim().toLowerCase() === siteAdminAccount.email) {
+        alert('Este e-mail é reservado para o acesso administrativo. Use a tela de login.');
         return;
     }
 
@@ -1257,7 +1279,15 @@ function submitRegister() {
     alert('Cadastro realizado com sucesso!');
 }
 
-function submitLogin() {
+async function hashSitePassword(value) {
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest))
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+async function submitLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
@@ -1266,30 +1296,52 @@ function submitLogin() {
         return;
     }
 
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    const normalizedEmail = email.trim().toLowerCase();
+    let user = null;
+    let isAdminLogin = false;
+
+    if (normalizedEmail === siteAdminAccount.email) {
+        const passwordHash = await hashSitePassword(password);
+        if (passwordHash === siteAdminAccount.passwordHash) {
+            user = { ...siteAdminAccount };
+            delete user.passwordHash;
+            isAdminLogin = true;
+        }
+    } else {
+        user = users.find(u => u.email.toLowerCase() === normalizedEmail && u.password === password);
+    }
     
     if (user) {
         currentUser = user;
-        localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
+        adminSessionActive = isAdminLogin;
+        if (isAdminLogin) {
+            localStorage.removeItem('mn_current_user');
+        } else {
+            localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
+        }
 
         // Mesclar chat do visitante com o da conta logada
-        const visitorId = localStorage.getItem('mn_visitor_id');
-        if (visitorId && chats[visitorId]) {
-            if (!chats[email]) chats[email] = [];
-            chats[email] = [...chats[email], ...chats[visitorId]];
-            delete chats[visitorId];
-            saveChatsToStorage();
+        if (!isAdminLogin) {
+            const visitorId = localStorage.getItem('mn_visitor_id');
+            if (visitorId && chats[visitorId]) {
+                if (!chats[normalizedEmail]) chats[normalizedEmail] = [];
+                chats[normalizedEmail] = [...chats[normalizedEmail], ...chats[visitorId]];
+                delete chats[visitorId];
+                saveChatsToStorage();
+            }
+            clientChatId = normalizedEmail;
         }
-        clientChatId = email;
 
         updateAuthUI();
         closeAuthModal();
+        if (isAdminLogin) enterAdminPanel();
     } else {
         alert('E-mail ou senha incorretos.');
     }
 }
 
 function logoutUser() {
+    adminSessionActive = false;
     currentUser = null;
     localStorage.removeItem('mn_current_user');
     
@@ -1699,6 +1751,11 @@ function deleteProductFromCatalog(productId) {
    ========================================================================== */
 
 function enterAdminPanel() {
+    if (!adminSessionActive || currentUser?.role !== 'admin') {
+        alert('Faça login com a conta administrativa para acessar o painel.');
+        openAuthModal();
+        return;
+    }
     navigateTo('admin-view');
     const dashboardTab = document.querySelector('[data-tab="admin-dashboard"]');
     if (dashboardTab) dashboardTab.click();
