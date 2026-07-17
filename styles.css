@@ -567,7 +567,7 @@ input:focus, select:focus, textarea:focus {
 .campaign-photo img, .campaign-video-card video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .campaign-video-card video { object-position: center bottom; }
 .campaign-photo figcaption { position: absolute; inset: auto 16px 16px; padding: 12px 14px; background: rgba(10,10,12,.76); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.14); font-size: 12px; font-weight: 700; }
-.campaign-video-card { grid-row: span 2; min-height: 878px; }
+.campaign-photo-tall, .campaign-video-card { min-height: 640px; }
 .campaign-video-copy { position: absolute; left: 20px; right: 20px; bottom: 20px; background: rgba(10,10,12,.78); backdrop-filter: blur(12px); padding: 16px 18px; display: flex; flex-direction: column; pointer-events: none; }
 .campaign-video-copy span { color: var(--accent-gold); font-size: 10px; font-weight: 800; letter-spacing: .14em; }
 .campaign-video-copy strong { font-size: 20px; margin-top: 3px; }
@@ -2232,7 +2232,7 @@ input:focus, select:focus, textarea:focus {
     .confidence-cta { grid-column: 1 / -1; text-align: center; }
 
     .campaign-layout { grid-template-columns: 1fr 1fr; }
-    .campaign-video-card { grid-row: auto; min-height: 560px; }
+    .campaign-photo-tall, .campaign-video-card { min-height: 560px; }
 
     .story-container {
         grid-template-columns: 1fr;
