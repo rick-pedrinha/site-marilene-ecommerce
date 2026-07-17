@@ -2585,6 +2585,31 @@ input:focus, select:focus, textarea:focus {
     gap: 8px;
 }
 
+.chat-widget-name-area {
+    padding: 10px 16px 0;
+    background-color: var(--bg-tertiary);
+}
+
+.chat-widget-name-area label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.chat-widget-name-area input {
+    width: 100%;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-light);
+}
+
 .chat-widget-input-area input {
     flex-grow: 1;
     background-color: var(--bg-primary);
@@ -2611,6 +2636,12 @@ input:focus, select:focus, textarea:focus {
 
 .chat-widget-input-area button:hover {
     background-color: var(--accent-gold-hover);
+}
+
+.chat-widget-input-area button:disabled,
+.chat-widget-input-area input:disabled {
+    cursor: wait;
+    opacity: 0.55;
 }
 
 /* ==========================================================================
