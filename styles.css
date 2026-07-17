@@ -870,6 +870,41 @@ input:focus, select:focus, textarea:focus {
     gap: 20px;
 }
 
+/* O detalhe do produto usa a rolagem da janela inteira, evitando conteúdo cortado. */
+#product-modal {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: clamp(12px, 3vh, 28px);
+}
+
+#product-modal .modal-card {
+    width: min(1120px, 100%);
+    max-width: 1120px;
+    max-height: none;
+    margin: auto;
+    overflow: visible;
+}
+
+#product-modal .modal-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(400px, .95fr);
+    align-items: stretch;
+}
+
+#product-modal .modal-image-side {
+    min-height: 620px;
+    aspect-ratio: auto;
+}
+
+#product-modal .modal-product-img {
+    object-fit: contain;
+}
+
+#product-modal .modal-content-side {
+    min-width: 0;
+    padding: clamp(28px, 4vw, 48px);
+    gap: clamp(14px, 2vh, 20px);
+}
+
 .modal-product-tag {
     font-size: 11px;
     font-weight: 700;
@@ -2219,6 +2254,19 @@ input:focus, select:focus, textarea:focus {
     .modal-grid {
         grid-template-columns: 1fr;
     }
+
+    #product-modal .modal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #product-modal .modal-image-side {
+        min-height: 0;
+        aspect-ratio: 1;
+    }
+
+    #product-modal .modal-content-side {
+        padding: 28px;
+    }
     
     .checkout-container {
         grid-template-columns: 1fr;
@@ -2241,6 +2289,24 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 600px) {
     .header-container {
         padding: 15px;
+    }
+
+    #product-modal {
+        padding: 8px;
+    }
+
+    #product-modal .modal-card {
+        border-radius: 10px;
+    }
+
+    #product-modal .modal-content-side {
+        padding: 24px 18px 28px;
+        gap: 16px;
+    }
+
+    #product-modal .modal-product-title {
+        padding-right: 36px;
+        font-size: 25px;
     }
     
     .main-nav {
