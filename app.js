@@ -1374,7 +1374,7 @@ function renderClientChat() {
     if (thread.length === 0) {
         container.innerHTML = `
             <div class="chat-msg msg-left">
-                Olá! Sou Marilene Naumebore. Agradecemos o contato! Como posso ajudar você hoje em relação aos moletons ou envio?
+                Olá! Sou Marilene. Agradecemos o contato! Como posso ajudar você hoje em relação aos moletons ou envio?
                 <span class="chat-msg-time">${getCurrentTimeStr()}</span>
             </div>
         `;
