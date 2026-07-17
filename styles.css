@@ -358,30 +358,6 @@ input:focus, select:focus, textarea:focus {
     flex-wrap: wrap;
 }
 
-.purchase-confidence {
-    width: 100%;
-    margin: 0 0 56px;
-    position: relative;
-    z-index: 3;
-    background: #f4efe4;
-    color: #151515;
-    border-radius: var(--radius-lg);
-    padding: 22px 28px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr) auto;
-    gap: 22px;
-    align-items: center;
-    box-shadow: var(--shadow-lg);
-}
-
-.purchase-confidence-item { display: flex; align-items: center; gap: 12px; }
-.purchase-confidence-item div { display: flex; flex-direction: column; }
-.purchase-confidence-item strong { font-size: 14px; }
-.purchase-confidence-item span:not(.confidence-icon) { color: #686158; font-size: 12px; }
-.confidence-icon { font-size: 22px; color: #8f711c; }
-.confidence-cta { color: #151515; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
-.confidence-cta:hover { color: #8f711c; }
-
 /* ==========================================================================
    PRODUCTS GRID & VITRINE
    ========================================================================== */
@@ -2223,14 +2199,6 @@ input:focus, select:focus, textarea:focus {
 
 /* Responsive fixes */
 @media (max-width: 900px) {
-    .purchase-confidence {
-        margin: 0 0 44px;
-        border-radius: 0;
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .confidence-cta { grid-column: 1 / -1; text-align: center; }
-
     .campaign-layout { grid-template-columns: 1fr 1fr; }
     .campaign-photo-tall, .campaign-video-card { min-height: 560px; }
 
@@ -2278,8 +2246,6 @@ input:focus, select:focus, textarea:focus {
         padding: 60px 15px;
     }
 
-    .purchase-confidence { grid-template-columns: 1fr; padding: 24px 20px; gap: 16px; margin-bottom: 36px; }
-    .confidence-cta { grid-column: auto; text-align: left; border-top: 1px solid rgba(0,0,0,.12); padding-top: 16px; }
     .products-grid { grid-template-columns: 1fr; gap: 24px; }
     .product-card-footer { align-items: flex-end; gap: 12px; }
     .campaign-section { padding: 20px 15px 70px; }
