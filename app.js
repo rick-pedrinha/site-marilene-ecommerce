@@ -28,6 +28,18 @@ const initialProducts = [
     }
 ];
 
+// Versão oficial do catálogo: 2 estampas × 2 cores = 4 casacos na vitrine.
+// Ao mudar este valor, navegadores com cópias antigas recebem novamente o catálogo do Git.
+const catalogVersion = '2026-07-four-hoodies-v1';
+
+function cloneInitialProducts() {
+    return initialProducts.map(product => ({
+        ...product,
+        colors: [...product.colors],
+        sizes: [...product.sizes]
+    }));
+}
+
 // Regras de cálculo de frete por estado do Brasil
 const shippingRates = {
     'DF': { region: 'Distrito Federal', pac: { price: 12.00, days: 2 }, sedex: { price: 18.00, days: 1 } },
@@ -229,30 +241,44 @@ function normalizeProductSkus() {
    ========================================================================== */
 
 function initApp() {
-    // 1. Carregar ou inicializar produtos
-    if (localStorage.getItem('mn_products')) {
-        products = JSON.parse(localStorage.getItem('mn_products'));
-    } else {
-        products = initialProducts;
+    // 1. Sincronizar uma vez com o catálogo oficial do Git e depois preservar edições do admin
+    const storedCatalogVersion = localStorage.getItem('mn_catalog_version');
+    const storedProducts = localStorage.getItem('mn_products');
+    if (storedCatalogVersion !== catalogVersion || !storedProducts) {
+        products = cloneInitialProducts();
         localStorage.setItem('mn_products', JSON.stringify(products));
+        localStorage.setItem('mn_catalog_version', catalogVersion);
+    } else {
+        try {
+            products = JSON.parse(storedProducts);
+            if (!Array.isArray(products) || products.length === 0) throw new Error('Catálogo inválido');
+        } catch (error) {
+            products = cloneInitialProducts();
+            localStorage.setItem('mn_products', JSON.stringify(products));
+        }
     }
     normalizeProductSkus();
 
-    // 2. Inicializar ou carregar estoque
+    // 2. Inicializar ou carregar estoque e restaurar variações que estiverem faltando
     if (localStorage.getItem('mn_stock')) {
         stock = JSON.parse(localStorage.getItem('mn_stock'));
     } else {
-        products.forEach(p => {
-            p.colors.forEach(color => {
-                p.sizes.forEach(size => {
-                    const key = `${p.id}_${color}_${size}`;
-                    stock[key] = {
-                        qty: 15,
-                        price: p.basePrice
-                    };
-                });
+        stock = {};
+    }
+
+    let stockChanged = false;
+    products.forEach(p => {
+        p.colors.forEach(color => {
+            p.sizes.forEach(size => {
+                const key = `${p.id}_${color}_${size}`;
+                if (!stock[key]) {
+                    stock[key] = { qty: 15, price: p.basePrice };
+                    stockChanged = true;
+                }
             });
         });
+    });
+    if (stockChanged || !localStorage.getItem('mn_stock')) {
         saveStockToStorage();
     }
 
