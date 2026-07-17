@@ -201,16 +201,9 @@ let users = [];
 let currentUser = null;
 let adminSessionActive = false;
 
-// Chat
-let chats = {}; // compatibilidade com conversas locais antigas; não é mais a fonte do chat
-let activeChatId = null; // ID da conversa selecionada no admin
-let clientChatId = null; // token anônimo persistente do cliente
-let clientChatMessages = [];
-let adminChatThreads = [];
+// Sessão administrativa
 let adminAccessToken = sessionStorage.getItem('mn_admin_access_token') || '';
 let adminRefreshToken = sessionStorage.getItem('mn_admin_refresh_token') || '';
-let chatSyncInProgress = false;
-let lastClientMessageCount = 0;
 
 // Estado da compra atual (Checkout)
 let checkoutShippingState = null; // DF, SP, etc.
@@ -308,24 +301,15 @@ function initApp() {
         cart = JSON.parse(localStorage.getItem('mn_cart'));
     }
 
-    // 7. Identidade anônima do chat compartilhado (o cliente informa apenas o nome)
-    clientChatId = getClientChatToken();
-    const savedChatName = currentUser?.name || localStorage.getItem('mn_chat_name') || '';
-    const chatNameInput = document.getElementById('chat-customer-name');
-    if (chatNameInput) chatNameInput.value = savedChatName;
-
     // Renderizações Iniciais
     renderProductGrid();
     updateCartUI();
     updateAuthUI();
-    renderClientChat();
     restoreAdminSession();
     
     // Configurar listeners gerais
     setupEventListeners();
 
-    // Atualizar mensagens online em poucos segundos
-    setInterval(syncRealTimeData, 2500);
 }
 
 function saveStockToStorage() {
@@ -338,26 +322,6 @@ function saveOrdersToStorage() {
 
 function saveCartToStorage() {
     localStorage.setItem('mn_cart', JSON.stringify(cart));
-}
-
-function saveChatsToStorage() {
-    localStorage.setItem('mn_chats', JSON.stringify(chats));
-}
-
-async function syncRealTimeData() {
-    if (chatSyncInProgress) return;
-    chatSyncInProgress = true;
-    try {
-        await renderClientChat({ quiet: true });
-
-        const adminChatTab = document.getElementById('admin-chat');
-        if (adminSessionActive && adminChatTab?.classList.contains('active')) {
-            await renderAdminChatThreads({ quiet: true });
-            if (activeChatId) await renderAdminActiveChat(activeChatId, { quiet: true });
-        }
-    } finally {
-        chatSyncInProgress = false;
-    }
 }
 
 /* ==========================================================================
@@ -527,9 +491,6 @@ function setupEventListeners() {
             } else if (targetTab === 'admin-products') {
                 titleEl.innerText = 'Catálogo de Produtos';
                 renderAdminProducts();
-            } else if (targetTab === 'admin-chat') {
-                titleEl.innerText = 'Mensagens do Chat';
-                renderAdminChatThreads();
             }
         });
     });
@@ -552,7 +513,7 @@ function setupEventListeners() {
     document.getElementById('filter-order-status').addEventListener('change', renderAdminOrders);
 
     // ==========================================
-    // LISTENERS FASE 2 (AUTENTICAÇÃO & CHAT)
+    // LISTENERS DE AUTENTICAÇÃO
     // ==========================================
     
     // Abrir/Fechar Modal de Auth
@@ -596,35 +557,8 @@ function setupEventListeners() {
     // Salvar edições do Perfil
     document.getElementById('save-profile-btn').addEventListener('click', saveUserProfile);
 
-    // Widget Chat Cliente - Abrir/Fechar
-    const chatTrigger = document.getElementById('chat-widget-trigger');
-    const chatClose = document.getElementById('chat-widget-close-btn');
-    const chatBox = document.getElementById('chat-widget-box');
-
-    chatTrigger.addEventListener('click', () => {
-        chatBox.classList.toggle('open');
-        // Resetar notificações ao abrir
-        document.getElementById('chat-client-badge').style.display = 'none';
-    });
-
-    chatClose.addEventListener('click', () => {
-        chatBox.classList.remove('open');
-    });
-
-    // Enviar mensagem no Chat Cliente
-    document.getElementById('chat-widget-send-btn').addEventListener('click', sendClientChatMessage);
-    document.getElementById('chat-widget-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendClientChatMessage();
-    });
-
     // Cadastrar Novo Produto
     document.getElementById('submit-new-product-btn').addEventListener('click', addProductToCatalog);
-
-    // Enviar mensagem Chat Admin
-    document.getElementById('admin-chat-send-btn').addEventListener('click', sendAdminChatMessage);
-    document.getElementById('admin-chat-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendAdminChatMessage();
-    });
 
     // Mobile Bottom Navigation Links
     document.getElementById('mob-nav-home').addEventListener('click', function(e) {
@@ -1286,72 +1220,34 @@ function submitRegister() {
 
     currentUser = newUser;
     localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
-    
-    clientChatId = getClientChatToken();
-    localStorage.setItem('mn_chat_name', name);
-    const chatNameInput = document.getElementById('chat-customer-name');
-    if (chatNameInput) chatNameInput.value = name;
 
     updateAuthUI();
     closeAuthModal();
     alert('Cadastro realizado com sucesso!');
 }
 
-function createUuid() {
-    if (crypto.randomUUID) return crypto.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
-        const random = Math.random() * 16 | 0;
-        const value = char === 'x' ? random : (random & 0x3 | 0x8);
-        return value.toString(16);
-    });
-}
-
-function getClientChatToken() {
-    let token = localStorage.getItem('mn_chat_token');
-    if (!token) {
-        token = createUuid();
-        localStorage.setItem('mn_chat_token', token);
-    }
-    return token;
-}
-
-function getChatCustomerName() {
-    const nameInput = document.getElementById('chat-customer-name');
-    const typedName = nameInput?.value.trim();
-    return typedName || currentUser?.name || localStorage.getItem('mn_chat_name') || '';
-}
-
-function formatChatTime(value) {
-    const date = value ? new Date(value) : new Date();
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-async function supabaseRequest(path, { body = null, accessToken = '', retry = true } = {}) {
+async function supabaseRequest(path, { method = 'POST', body = null, accessToken = '', retry = true } = {}) {
     const response = await fetch(`${supabaseConfig.url}${path}`, {
-        method: 'POST',
+        method,
         headers: {
             apikey: supabaseConfig.publicKey,
             Authorization: `Bearer ${accessToken || supabaseConfig.publicKey}`,
             'Content-Type': 'application/json'
         },
-        body: body === null ? null : JSON.stringify(body)
+        body: method === 'GET' || body === null ? null : JSON.stringify(body)
     });
 
     if (response.status === 401 && accessToken && retry && await refreshAdminSession()) {
-        return supabaseRequest(path, { body, accessToken: adminAccessToken, retry: false });
+        return supabaseRequest(path, { method, body, accessToken: adminAccessToken, retry: false });
     }
 
     const payload = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
-        const error = new Error(payload?.message || payload?.msg || 'Não foi possível conectar ao atendimento.');
+        const error = new Error(payload?.message || payload?.msg || 'Não foi possível validar o acesso administrativo.');
         error.status = response.status;
         throw error;
     }
     return payload;
-}
-
-async function supabaseRpc(functionName, params = {}, accessToken = '') {
-    return supabaseRequest(`/rest/v1/rpc/${functionName}`, { body: params, accessToken });
 }
 
 function saveAdminSession(payload) {
@@ -1389,20 +1285,25 @@ async function authenticateAdmin(email, password) {
         body: { email, password },
         retry: false
     });
-    saveAdminSession(payload);
-    const isAdmin = await supabaseRpc('chat_is_admin', {}, adminAccessToken);
-    if (isAdmin !== true) {
+    const authenticatedEmail = payload?.user?.email?.trim().toLowerCase();
+    if (authenticatedEmail !== siteAdminAccount.email) {
         clearAdminSession();
         throw new Error('Esta conta não possui permissão administrativa.');
     }
+    saveAdminSession(payload);
     return true;
 }
 
 async function restoreAdminSession() {
     if (!adminAccessToken) return;
     try {
-        const isAdmin = await supabaseRpc('chat_is_admin', {}, adminAccessToken);
-        if (isAdmin !== true) throw new Error('Sessão sem permissão.');
+        const user = await supabaseRequest('/auth/v1/user', {
+            method: 'GET',
+            accessToken: adminAccessToken
+        });
+        if (user?.email?.trim().toLowerCase() !== siteAdminAccount.email) {
+            throw new Error('Sessão sem permissão.');
+        }
         currentUser = { ...siteAdminAccount };
         adminSessionActive = true;
         updateAuthUI();
@@ -1454,12 +1355,6 @@ async function submitLogin() {
             localStorage.setItem('mn_current_user', JSON.stringify(currentUser));
         }
 
-        if (!isAdminLogin) {
-            clientChatId = getClientChatToken();
-            const chatNameInput = document.getElementById('chat-customer-name');
-            if (chatNameInput) chatNameInput.value = user.name || '';
-        }
-
         updateAuthUI();
         closeAuthModal();
         if (isAdminLogin) enterAdminPanel();
@@ -1472,7 +1367,6 @@ function logoutUser() {
     clearAdminSession();
     currentUser = null;
     localStorage.removeItem('mn_current_user');
-    clientChatId = getClientChatToken();
 
     updateAuthUI();
     navigateTo('store-view');
@@ -1560,198 +1454,6 @@ function renderCustomerOrdersHistory() {
         `;
         container.appendChild(card);
     });
-}
-
-/* ==========================================================================
-   FASE 2: SISTEMA DE CHAT DE SUPORTE
-   ========================================================================== */
-
-async function renderClientChat({ quiet = false } = {}) {
-    const container = document.getElementById('chat-widget-messages-container');
-    if (!container || !clientChatId) return;
-
-    try {
-        const messages = await supabaseRpc('chat_get_client', { p_client_token: clientChatId });
-        const previousCount = lastClientMessageCount;
-        clientChatMessages = Array.isArray(messages) ? messages : [];
-        lastClientMessageCount = clientChatMessages.length;
-
-        container.innerHTML = '';
-        if (clientChatMessages.length === 0) {
-            const welcome = document.createElement('div');
-            welcome.className = 'chat-msg msg-left';
-            welcome.append('Olá! Sou Marilene. Como posso ajudar você com os moletons ou com o envio?');
-            const time = document.createElement('span');
-            time.className = 'chat-msg-time';
-            time.textContent = formatChatTime();
-            welcome.appendChild(time);
-            container.appendChild(welcome);
-            return;
-        }
-
-        clientChatMessages.forEach(message => {
-            const bubble = document.createElement('div');
-            bubble.className = `chat-msg ${message.sender_type === 'client' ? 'msg-right' : 'msg-left'}`;
-            bubble.append(message.body);
-            const time = document.createElement('span');
-            time.className = 'chat-msg-time';
-            time.textContent = formatChatTime(message.created_at);
-            bubble.appendChild(time);
-            container.appendChild(bubble);
-        });
-
-        const latest = clientChatMessages[clientChatMessages.length - 1];
-        const chatBox = document.getElementById('chat-widget-box');
-        if (previousCount > 0 && clientChatMessages.length > previousCount && latest?.sender_type === 'admin' && !chatBox?.classList.contains('open')) {
-            const badge = document.getElementById('chat-client-badge');
-            badge.innerText = '1';
-            badge.style.display = 'flex';
-        }
-        container.scrollTop = container.scrollHeight;
-    } catch (error) {
-        if (!quiet && clientChatMessages.length === 0) {
-            container.innerHTML = '<p class="placeholder-text" style="border:none; margin:auto;">Atendimento temporariamente indisponível. Tente novamente em instantes.</p>';
-        }
-    }
-}
-
-async function sendClientChatMessage() {
-    const input = document.getElementById('chat-widget-input');
-    const sendButton = document.getElementById('chat-widget-send-btn');
-    const nameInput = document.getElementById('chat-customer-name');
-    const text = input.value.trim();
-    const customerName = getChatCustomerName();
-    if (!text) return;
-    if (!customerName) {
-        alert('Digite seu nome para iniciar o atendimento.');
-        nameInput.focus();
-        return;
-    }
-
-    localStorage.setItem('mn_chat_name', customerName);
-    sendButton.disabled = true;
-    input.disabled = true;
-    nameInput.disabled = true;
-    try {
-        await supabaseRpc('chat_send_client', {
-            p_client_token: clientChatId,
-            p_customer_name: customerName,
-            p_body: text
-        });
-        input.value = '';
-        await renderClientChat();
-    } catch (error) {
-        alert('Não foi possível enviar a mensagem agora. Verifique sua conexão e tente novamente.');
-    } finally {
-        sendButton.disabled = false;
-        input.disabled = false;
-        nameInput.disabled = false;
-        input.focus();
-    }
-}
-
-function getCurrentTimeStr() {
-    const now = new Date();
-    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-}
-
-/* Chat Administrativo */
-async function renderAdminChatThreads({ quiet = false } = {}) {
-    const container = document.getElementById('admin-chat-threads-container');
-    if (!container) return;
-
-    try {
-        adminChatThreads = await supabaseRpc('chat_admin_conversations', {}, adminAccessToken);
-        container.innerHTML = '';
-        if (!adminChatThreads.length) {
-            container.innerHTML = '<p class="placeholder-text" style="border:none; margin:20px;">Nenhuma conversa iniciada ainda.</p>';
-        }
-
-        adminChatThreads.forEach(thread => {
-            const card = document.createElement('div');
-            card.className = `thread-card ${thread.conversation_id === activeChatId ? 'active' : ''}`;
-
-            const details = document.createElement('div');
-            details.className = 'thread-details';
-            const name = document.createElement('span');
-            name.className = 'thread-name';
-            name.textContent = thread.customer_name || 'Cliente';
-            const preview = document.createElement('span');
-            preview.className = 'thread-preview';
-            preview.textContent = thread.last_message || 'Conversa iniciada';
-            details.append(name, preview);
-            card.appendChild(details);
-            card.addEventListener('click', async () => {
-                activeChatId = thread.conversation_id;
-                await renderAdminChatThreads();
-                await renderAdminActiveChat(activeChatId);
-            });
-            container.appendChild(card);
-        });
-
-        const badge = document.getElementById('admin-chat-badge');
-        badge.innerText = adminChatThreads.length;
-        badge.style.display = adminChatThreads.length ? 'inline-block' : 'none';
-    } catch (error) {
-        if (!quiet) container.innerHTML = '<p class="placeholder-text" style="border:none; margin:20px;">Faça login novamente para carregar as conversas.</p>';
-    }
-}
-
-async function renderAdminActiveChat(chatId, { quiet = false } = {}) {
-    const header = document.getElementById('admin-chat-active-header');
-    const container = document.getElementById('admin-chat-messages-container');
-    const inputWrapper = document.getElementById('admin-chat-input-wrapper');
-
-    if (!container || !header) return;
-
-    try {
-        const messages = await supabaseRpc('chat_admin_messages', { p_conversation_id: chatId }, adminAccessToken);
-        const thread = adminChatThreads.find(item => item.conversation_id === chatId);
-        header.innerText = `Atendimento: ${thread?.customer_name || 'Cliente'}`;
-        inputWrapper.style.display = 'flex';
-        container.innerHTML = '';
-
-        messages.forEach(message => {
-            const bubble = document.createElement('div');
-            bubble.className = `chat-msg ${message.sender_type === 'admin' ? 'msg-right' : 'msg-left'}`;
-            const sender = document.createElement('strong');
-            sender.textContent = message.sender_type === 'admin' ? 'Suporte:' : `${message.sender_name || 'Cliente'}:`;
-            bubble.append(sender, document.createElement('br'), message.body);
-            const time = document.createElement('span');
-            time.className = 'chat-msg-time';
-            time.textContent = formatChatTime(message.created_at);
-            bubble.appendChild(time);
-            container.appendChild(bubble);
-        });
-        container.scrollTop = container.scrollHeight;
-    } catch (error) {
-        if (!quiet) container.innerHTML = '<p class="placeholder-text" style="border:none; margin:auto;">Não foi possível carregar esta conversa.</p>';
-    }
-}
-
-async function sendAdminChatMessage() {
-    const input = document.getElementById('admin-chat-input');
-    const sendButton = document.getElementById('admin-chat-send-btn');
-    const text = input.value.trim();
-    if (!text || !activeChatId) return;
-
-    sendButton.disabled = true;
-    input.disabled = true;
-    try {
-        await supabaseRpc('chat_send_admin', {
-            p_conversation_id: activeChatId,
-            p_body: text
-        }, adminAccessToken);
-        input.value = '';
-        await renderAdminActiveChat(activeChatId);
-        await renderAdminChatThreads();
-    } catch (error) {
-        alert('Não foi possível enviar a resposta. Faça login novamente e tente de novo.');
-    } finally {
-        sendButton.disabled = false;
-        input.disabled = false;
-        input.focus();
-    }
 }
 
 /* ==========================================================================

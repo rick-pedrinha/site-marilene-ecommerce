@@ -618,40 +618,6 @@
             </a>
         </nav>
 
-        <!-- WIDGET DE CHAT FLUTUANTE DO CLIENTE -->
-        <div class="chat-widget" id="chat-widget">
-            <button class="chat-widget-trigger" id="chat-widget-trigger" aria-label="Abrir Chat de Atendimento">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                <span class="chat-unread-badge" id="chat-client-badge">1</span>
-            </button>
-            
-            <div class="chat-widget-box" id="chat-widget-box">
-                <div class="chat-widget-header">
-                    <div class="chat-admin-profile">
-                        <div class="chat-admin-avatar">M</div>
-                        <div class="chat-admin-info">
-                            <span class="chat-admin-name">Suporte Marilene</span>
-                            <span class="chat-admin-status">Online</span>
-                        </div>
-                    </div>
-                    <button class="chat-widget-close" id="chat-widget-close-btn">&times;</button>
-                </div>
-                <div class="chat-widget-messages" id="chat-widget-messages-container">
-                    <!-- Mensagens geradas dinamicamente -->
-                </div>
-                <div class="chat-widget-name-area">
-                    <label for="chat-customer-name">Seu nome</label>
-                    <input type="text" id="chat-customer-name" maxlength="100" placeholder="Como podemos chamar você?" autocomplete="name">
-                </div>
-                <div class="chat-widget-input-area">
-                    <input type="text" id="chat-widget-input" maxlength="1000" placeholder="Escreva uma mensagem...">
-                    <button id="chat-widget-send-btn" aria-label="Enviar mensagem">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <a
             class="whatsapp-float"
             href="https://wa.me/5561992863496?text=Ol%C3%A1%21%20Vim%20pelo%20site%20Marilene%20e%20gostaria%20de%20atendimento."
@@ -690,10 +656,6 @@
                         </button>
                         <button class="admin-nav-item" data-tab="admin-products">
                             <span class="icon">🏷️</span> Produtos
-                        </button>
-                        <button class="admin-nav-item" data-tab="admin-chat">
-                            <span class="icon">💬</span> Chat
-                            <span class="admin-badge-count" id="admin-chat-badge" style="background-color: var(--accent-gold); color: var(--text-dark);">0</span>
                         </button>
                         <button class="admin-nav-item exit-btn" id="exit-admin-btn">
                             <span class="icon">🚪</span> Voltar à Loja
@@ -931,34 +893,6 @@
                         </div>
                     </div>
 
-                    <!-- Aba: Chat -->
-                    <div class="admin-tab-content" id="admin-chat">
-                        <div class="admin-chat-layout" style="display:grid; grid-template-columns: 280px 1fr; border:1px solid var(--border-color); border-radius:var(--radius-md); background-color:var(--bg-secondary); height:550px; overflow:hidden;">
-                            
-                            <div class="admin-chat-sidebar" style="border-right:1px solid var(--border-color); display:flex; flex-direction:column;">
-                                <div class="admin-chat-sidebar-header" style="padding:16px 20px; border-bottom:1px solid var(--border-color); background-color:var(--bg-tertiary);">
-                                    <h3 style="font-size:14px; font-weight:700;">Conversas Ativas</h3>
-                                </div>
-                                <div class="admin-chat-threads-list" id="admin-chat-threads-container" style="flex-grow:1; overflow-y:auto; display:flex; flex-direction:column;">
-                                    <!-- Preenchido dinamicamente por JS -->
-                                </div>
-                            </div>
-
-                            <div class="admin-chat-main" style="display:flex; flex-direction:column; background-color:var(--bg-primary);">
-                                <div id="admin-chat-active-header" class="admin-chat-active-header" style="padding:16px 20px; border-bottom:1px solid var(--border-color); background-color:var(--bg-secondary); font-weight:700;">
-                                    Selecione um cliente para iniciar
-                                </div>
-                                <div class="admin-chat-messages" id="admin-chat-messages-container" style="flex-grow:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px;">
-                                    <p class="placeholder-text" style="border:none; margin: auto;">Nenhum atendimento selecionado.</p>
-                                </div>
-                                <div class="admin-chat-input-area" id="admin-chat-input-wrapper" style="display:none; padding:16px 20px; border-top:1px solid var(--border-color); background-color:var(--bg-secondary); gap:12px; align-items:center;">
-                                    <input type="text" id="admin-chat-input" placeholder="Digite uma resposta comercial..." style="flex-grow:1; background-color:var(--bg-tertiary); border:1px solid var(--border-color); padding:10px 16px; border-radius:var(--radius-sm); font-size:14px; color:var(--text-light);">
-                                    <button class="btn btn-primary" id="admin-chat-send-btn" style="padding:10px 24px;">Enviar</button>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
                 </main>
             </div>
         </div>
@@ -966,6 +900,6 @@
     </div>
 
     <!-- Script de lógica -->
-    <script src="app.js?v=20260716-13"></script>
+    <script src="app.js?v=20260716-15"></script>
 </body>
 </html>
