@@ -6,6 +6,7 @@
 const initialProducts = [
     {
         id: 'quem-protege',
+        sku: 'MAR-0001',
         name: 'Moletom "Quem Protege Não Dorme"',
         basePrice: 289.90,
         description: 'Moletom premium com capuz e bolso canguru, produzido em algodão de alta gramatura de toque macio. Estampa frontal artística combinando folhas de Espada de São Jorge em tons verdes orgânicos com tipografia autoral exclusiva. Símbolo de proteção, pertencimento e força espiritual que expressa a cultura popular brasileira.',
@@ -16,6 +17,7 @@ const initialProducts = [
     },
     {
         id: 'maria',
+        sku: 'MAR-0002',
         name: 'Moletom "MARIA"',
         basePrice: 299.90,
         description: 'Moletom de alta qualidade com corte streetwear contemporâneo. A estampa traz a icônica silhueta de uma mulher negra com cabelo afro e flor vermelha exuberante, celebrando a identidade, força e legado das mulheres brasileiras. Uma peça de alta costura com significado social e estético.',
@@ -182,6 +184,24 @@ let checkoutShippingCost = 0;
 let checkoutShippingMethod = '';
 let checkoutDiscount = 0;
 
+function formatProductSku(index) {
+    return `MAR-${String(index + 1).padStart(4, '0')}`;
+}
+
+function normalizeProductSkus() {
+    let changed = false;
+    products = products.map((product, index) => {
+        const sku = formatProductSku(index);
+        if (product.sku === sku) return product;
+        changed = true;
+        return { ...product, sku };
+    });
+
+    if (changed) {
+        localStorage.setItem('mn_products', JSON.stringify(products));
+    }
+}
+
 /* ==========================================================================
    FUNÇÕES DE INICIALIZAÇÃO E PERSISTÊNCIA
    ========================================================================== */
@@ -194,6 +214,7 @@ function initApp() {
         products = initialProducts;
         localStorage.setItem('mn_products', JSON.stringify(products));
     }
+    normalizeProductSkus();
 
     // 2. Inicializar ou carregar estoque
     if (localStorage.getItem('mn_stock')) {
@@ -647,7 +668,7 @@ function renderProductGrid() {
                     <span class="product-card-color">${color}</span>
                 </button>
                 <div class="product-card-content">
-                    <span class="product-eyebrow">CASACO COM CAPUZ · ${color.toUpperCase()}</span>
+                    <span class="product-eyebrow">SKU ${p.sku} · CASACO COM CAPUZ · ${color.toUpperCase()}</span>
                     <h3 class="product-card-title">${p.name}</h3>
                     <p class="product-card-desc">${p.description}</p>
                     <div class="product-payment-note">PIX com 5% OFF ou cartão em até 6x</div>
@@ -689,6 +710,7 @@ function openProductModal(productId, preferredColor = null) {
                 <div>
                     <span class="modal-product-tag">${p.tag || 'Novidade'}</span>
                     <h2 class="modal-product-title">${p.name}</h2>
+                    <span class="modal-product-sku">SKU ${p.sku}</span>
                 </div>
                 <div class="modal-product-price" id="modal-price-display">R$ ${currentPrice.toFixed(2).replace('.', ',')}</div>
                 <p class="modal-product-desc">${p.description}</p>
@@ -787,7 +809,7 @@ function openProductModal(productId, preferredColor = null) {
 
         modalContent.querySelector('#modal-add-to-cart-btn').addEventListener('click', () => {
             const qty = parseInt(qtyInput.value) || 1;
-            addToCart(p.id, p.name, selectedColor, selectedSize, qty, currentPrice);
+            addToCart(p.id, p.sku, p.name, selectedColor, selectedSize, qty, currentPrice);
             document.getElementById('product-modal').classList.remove('active');
         });
     };
@@ -810,7 +832,7 @@ function getQtyStatusHtml(qty) {
    LÓGICA DO CARRINHO DE COMPRAS
    ========================================================================== */
 
-function addToCart(productId, name, color, size, qty, price) {
+function addToCart(productId, sku, name, color, size, qty, price) {
     const existingIndex = cart.findIndex(item => 
         item.productId === productId && item.color === color && item.size === size
     );
@@ -822,9 +844,11 @@ function addToCart(productId, name, color, size, qty, price) {
         let newQty = cart[existingIndex].qty + qty;
         if (newQty > maxStock) newQty = maxStock;
         cart[existingIndex].qty = newQty;
+        cart[existingIndex].sku = sku;
     } else {
         cart.push({
             productId,
+            sku,
             name,
             color,
             size,
@@ -872,6 +896,7 @@ function updateCartUI() {
         const imgPath = `assets/hoodie_${item.productId === 'maria' ? 'maria' : (item.productId === 'quem-protege' ? 'quem_protege' : 'quem_protege')}_${item.color.toLowerCase()}.jpg`;
         const stockKey = `${item.productId}_${item.color}_${item.size}`;
         const maxStock = stock[stockKey] ? stock[stockKey].qty : 0;
+        const itemSku = item.sku || products.find(product => product.id === item.productId)?.sku || '';
 
         const row = document.createElement('div');
         row.className = 'cart-item-row';
@@ -882,7 +907,7 @@ function updateCartUI() {
             <div class="cart-item-details">
                 <div class="cart-item-meta">
                     <h4>${item.name}</h4>
-                    <span class="cart-item-variation-text">Cor: ${item.color} | Tam: ${item.size}</span>
+                    <span class="cart-item-variation-text">${itemSku ? `SKU ${itemSku} | ` : ''}Cor: ${item.color} | Tam: ${item.size}</span>
                 </div>
                 <div class="cart-item-controls">
                     <div class="cart-item-qty-selector">
@@ -1561,6 +1586,7 @@ function renderAdminProducts() {
             <td>
                 <img src="${p.imagePrefix}_branco.jpg" alt="${p.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm);" onerror="this.src='https://placehold.co/100x100?text=MN'">
             </td>
+            <td><strong>${p.sku}</strong></td>
             <td><strong>${p.name}</strong></td>
             <td>R$ ${p.basePrice.toFixed(2).replace('.', ',')}</td>
             <td><span class="status-badge status-delivered">${p.tag || 'Comum'}</span></td>
@@ -1612,6 +1638,7 @@ function addProductToCatalog() {
     // Criar Objeto Produto
     const newProduct = {
         id,
+        sku: formatProductSku(products.length),
         name,
         basePrice: price,
         description,
@@ -1623,6 +1650,7 @@ function addProductToCatalog() {
 
     // Adicionar ao array global
     products.push(newProduct);
+    normalizeProductSkus();
     localStorage.setItem('mn_products', JSON.stringify(products));
 
     // Inicializar estoque padrão (15 unidades) para as novas variações
@@ -1650,7 +1678,7 @@ function deleteProductFromCatalog(productId) {
     if (confirm('Deseja realmente excluir este produto e todas as suas variações de estoque?')) {
         // Remover produto
         products = products.filter(p => p.id !== productId);
-        localStorage.setItem('mn_products', JSON.stringify(products));
+        normalizeProductSkus();
 
         // Limpar variações de estoque associadas a esse produto
         Object.keys(stock).forEach(key => {
