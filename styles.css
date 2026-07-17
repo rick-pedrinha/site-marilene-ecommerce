@@ -2427,21 +2427,17 @@ input:focus, select:focus, textarea:focus {
     right: 30px;
     bottom: 98px;
     z-index: 998;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 9px;
-    min-height: 48px;
-    padding: 0 16px 0 12px;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 999px;
+    border-radius: 50%;
     background: #25d366;
-    color: #082d18;
     box-shadow: var(--shadow-md);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
     text-decoration: none;
-    text-transform: uppercase;
     transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
 }
 
@@ -2452,16 +2448,10 @@ input:focus, select:focus, textarea:focus {
     transform: translateY(-2px);
 }
 
-.whatsapp-float-icon {
-    display: grid;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.9);
-    color: #128c4a;
-    font-size: 17px;
-    line-height: 1;
+.whatsapp-float img {
+    display: block;
+    width: 25px;
+    height: 25px;
 }
 
 .chat-widget {
