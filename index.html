@@ -895,6 +895,7 @@
                             <div class="admin-card-header flex-header">
                                 <h3>Gerenciador de Pedidos</h3>
                                 <div class="header-filters">
+                                    <button class="btn btn-secondary btn-small" id="refresh-orders-btn" type="button">Atualizar pedidos</button>
                                     <button class="btn btn-secondary btn-small" id="export-orders-csv-btn" type="button" title="Exporta somente pedidos com Pix confirmado que ainda não foram enviados">Baixar CSV para produção</button>
                                     <select id="filter-order-status" class="admin-select">
                                         <option value="all">Todos os Status</option>
@@ -1054,6 +1055,6 @@
 
     <!-- Script de lógica -->
     <script src="vendor/supabase.js?v=2.110.7"></script>
-    <script src="app.js?v=20260720-14"></script>
+    <script src="app.js?v=20260720-15"></script>
 </body>
 </html>

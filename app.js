@@ -369,7 +369,7 @@ function mapOrderRow(row) {
 }
 
 async function syncOrdersFromServer() {
-    if (!adminAccessToken || !currentAuthUser) return;
+    if (!adminAccessToken || !currentAuthUser) return false;
     let path = '/rest/v1/orders?select=*&order=created_at.desc';
     if (!adminSessionActive) path += `&user_id=eq.${encodeURIComponent(currentAuthUser.id)}`;
     try {
@@ -383,8 +383,10 @@ async function syncOrdersFromServer() {
         if (!adminSessionActive && document.getElementById('account-view').classList.contains('active')) {
             renderCustomerOrdersHistory();
         }
+        return true;
     } catch (error) {
         console.warn('Não foi possível sincronizar os pedidos:', error.message);
+        return false;
     }
 }
 
@@ -567,8 +569,12 @@ function setupEventListeners() {
         navigateTo('store-view');
     });
 
-    document.getElementById('conf-my-orders-btn').addEventListener('click', () => {
-        if (!currentUser || currentUser.role === 'admin') return;
+    document.getElementById('conf-my-orders-btn').addEventListener('click', async () => {
+        if (!currentUser) {
+            openAuthModal();
+            return;
+        }
+        await syncOrdersFromServer();
         renderAccountProfile();
         navigateTo('account-view');
     });
@@ -647,6 +653,7 @@ function setupEventListeners() {
     // Filtro de Status na tabela de pedidos
     document.getElementById('filter-order-status').addEventListener('change', renderAdminOrders);
     document.getElementById('export-orders-csv-btn').addEventListener('click', downloadOrdersCsv);
+    document.getElementById('refresh-orders-btn').addEventListener('click', refreshAdminOrders);
 
     // ==========================================
     // LISTENERS DE AUTENTICAÇÃO
@@ -1483,7 +1490,9 @@ function showPixConfirmation(order) {
     document.getElementById('conf-pix-recipient').innerText = pixConfig.recipient;
     document.getElementById('conf-pix-key').value = pixConfig.key;
     document.getElementById('conf-pix-total').innerText = `R$ ${order.totalPrice.toFixed(2).replace('.', ',')}`;
-    document.getElementById('conf-my-orders-btn').hidden = !currentUser || currentUser.role === 'admin';
+    const myOrdersButton = document.getElementById('conf-my-orders-btn');
+    myOrdersButton.hidden = !currentUser;
+    myOrdersButton.textContent = currentUser?.role === 'admin' ? 'Ver Minhas Compras' : 'Ver Meus Pedidos';
     navigateTo('confirmation-view');
 }
 
@@ -2274,6 +2283,20 @@ function enterAdminPanel() {
     const dashboardTab = document.querySelector('[data-tab="admin-dashboard"]');
     if (dashboardTab) dashboardTab.click();
     renderAdminUsers();
+    syncOrdersFromServer();
+}
+
+async function refreshAdminOrders() {
+    if (!adminSessionActive) return;
+    const button = document.getElementById('refresh-orders-btn');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Atualizando...';
+    const refreshed = await syncOrdersFromServer();
+    button.disabled = false;
+    button.textContent = refreshed ? 'Pedidos atualizados' : 'Tentar novamente';
+    setTimeout(() => { button.textContent = originalText; }, 1800);
+    if (!refreshed) alert('Não foi possível atualizar os pedidos agora. Confira a internet e tente novamente.');
 }
 
 function renderAdminDashboard() {
