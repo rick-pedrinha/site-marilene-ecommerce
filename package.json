@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "E-commerce e Painel Administrativo da marca Marilene Naumebore",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check app.js && node --check server.js"
   },
   "keywords": [
     "ecommerce",

@@ -1,0 +1,18 @@
+{
+  "quem-protege_Branco_P": { "price": 289.90, "qty": 15 },
+  "quem-protege_Branco_M": { "price": 289.90, "qty": 15 },
+  "quem-protege_Branco_G": { "price": 289.90, "qty": 15 },
+  "quem-protege_Branco_GG": { "price": 289.90, "qty": 15 },
+  "quem-protege_Preto_P": { "price": 289.90, "qty": 15 },
+  "quem-protege_Preto_M": { "price": 289.90, "qty": 15 },
+  "quem-protege_Preto_G": { "price": 289.90, "qty": 15 },
+  "quem-protege_Preto_GG": { "price": 289.90, "qty": 15 },
+  "maria_Branco_P": { "price": 299.90, "qty": 15 },
+  "maria_Branco_M": { "price": 299.90, "qty": 15 },
+  "maria_Branco_G": { "price": 299.90, "qty": 15 },
+  "maria_Branco_GG": { "price": 299.90, "qty": 15 },
+  "maria_Preto_P": { "price": 299.90, "qty": 15 },
+  "maria_Preto_M": { "price": 299.90, "qty": 15 },
+  "maria_Preto_G": { "price": 299.90, "qty": 15 },
+  "maria_Preto_GG": { "price": 299.90, "qty": 15 }
+}

@@ -1,0 +1,56 @@
+name: Atualizar banco Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-migrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: ${{ vars.SUPABASE_AUTOMATION_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o projeto
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Conectar ao projeto Supabase
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: jlmzisqtashbdsppryso
+
+      - name: Aplicar migrações pendentes
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Configurar serviço de e-mail
+        if: ${{ vars.EMAIL_NOTIFICATIONS_ENABLED == 'true' }}
+        run: supabase secrets set BREVO_API_KEY="$BREVO_API_KEY" EMAIL_FROM="$EMAIL_FROM"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+
+      - name: Publicar função de e-mail
+        if: ${{ vars.EMAIL_NOTIFICATIONS_ENABLED == 'true' }}
+        run: supabase functions deploy send-order-email
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

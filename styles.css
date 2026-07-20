@@ -418,6 +418,34 @@ input:focus, select:focus, textarea:focus {
     gap: 40px;
 }
 
+.store-admin-banner {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 20px;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.03));
+}
+
+.store-admin-banner > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.store-admin-banner strong {
+    color: var(--accent-gold);
+    font-family: 'Montserrat', sans-serif;
+}
+
+.store-admin-banner span {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 .product-card {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -432,6 +460,126 @@ input:focus, select:focus, textarea:focus {
     transform: translateY(-8px);
     border-color: rgba(212, 175, 55, 0.3);
     box-shadow: var(--shadow-md);
+}
+
+.admin-product-card:hover {
+    transform: none;
+}
+
+.store-admin-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 24px 22px;
+    border-top: 1px solid rgba(212, 175, 55, 0.3);
+    background: rgba(212, 175, 55, 0.055);
+}
+
+.store-admin-editor-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--accent-gold);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.store-admin-editor-title small {
+    color: var(--text-muted);
+}
+
+.store-admin-price-field,
+.store-admin-stock-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.store-admin-price-field > span,
+.store-admin-stock-grid label > span {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.store-admin-price-field > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+}
+
+.store-admin-price-field strong {
+    color: var(--accent-gold);
+    font-size: 13px;
+}
+
+.store-admin-price-input,
+.store-admin-qty-input {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-light);
+    font: 700 13px 'Outfit', sans-serif;
+    outline: none;
+}
+
+.store-admin-price-input {
+    border: 0;
+    padding: 10px 0;
+}
+
+.store-admin-qty-input {
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.store-admin-price-input:focus,
+.store-admin-qty-input:focus {
+    border-color: var(--accent-gold);
+}
+
+.store-admin-stock-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.store-admin-toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 3000;
+    max-width: min(420px, calc(100vw - 32px));
+    padding: 14px 18px;
+    border: 1px solid rgba(76, 217, 100, 0.35);
+    border-radius: var(--radius-md);
+    background: #132018;
+    color: #7aea8e;
+    box-shadow: var(--shadow-lg);
+    font-size: 13px;
+    font-weight: 700;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.store-admin-toast.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.store-admin-toast.warning {
+    border-color: rgba(255, 204, 0, 0.35);
+    background: #241f0d;
+    color: #ffcc00;
 }
 
 .product-card-image-box {
@@ -1345,9 +1493,13 @@ input:focus, select:focus, textarea:focus {
 
 .col-12 { grid-column: span 12; }
 .col-10 { grid-column: span 10; }
+.col-9 { grid-column: span 9; }
 .col-8 { grid-column: span 8; }
+.col-7 { grid-column: span 7; }
 .col-6 { grid-column: span 6; }
+.col-5 { grid-column: span 5; }
 .col-4 { grid-column: span 4; }
+.col-3 { grid-column: span 3; }
 .col-2 { grid-column: span 2; }
 
 .form-group label {
@@ -1482,6 +1634,69 @@ input:focus, select:focus, textarea:focus {
     font-size: 12px;
     font-weight: 700;
     text-align: center;
+}
+
+.pix-only-selector {
+    grid-template-columns: 1fr;
+}
+
+.pix-only-option {
+    min-height: 86px;
+    padding: 18px 20px;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.pix-payment-mark {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 12px;
+    background: #32bcad;
+    color: #07110f;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.pix-payment-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+}
+
+.pix-payment-copy strong {
+    color: var(--text-light);
+    font-size: 16px;
+}
+
+.pix-payment-copy small,
+.pix-only-details p {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.secure-payment-label {
+    padding: 6px 9px;
+    border: 1px solid rgba(76, 217, 100, 0.25);
+    border-radius: 30px;
+    color: #4cd964;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.pix-only-details {
+    border-color: rgba(50, 188, 173, 0.3);
+    background: rgba(50, 188, 173, 0.055);
+}
+
+.pix-only-details strong {
+    display: block;
+    margin-bottom: 6px;
 }
 
 .payment-details-box {
@@ -1703,6 +1918,114 @@ input:focus, select:focus, textarea:focus {
 
 .order-info-card p {
     font-size: 14px;
+}
+
+.pix-payment-card {
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(50, 188, 173, 0.35);
+    border-radius: var(--radius-md);
+    background: rgba(50, 188, 173, 0.06);
+    text-align: left;
+}
+
+.pix-payment-card h3 {
+    margin: 5px 0 18px;
+    font-size: 17px;
+}
+
+.pix-payment-eyebrow {
+    color: #32bcad;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.pix-recipient-line,
+.pix-total-line,
+.pix-payment-help {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.admin-access-card {
+    margin-top: 24px;
+}
+
+.admin-access-form {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(240px, 1fr) auto;
+    gap: 14px;
+    align-items: end;
+    padding: 20px 0;
+}
+
+.admin-access-form .form-group {
+    margin: 0;
+}
+
+.admin-users-list {
+    display: grid;
+    gap: 9px;
+}
+
+.admin-user-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 13px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+}
+
+.admin-user-row > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.admin-user-row span {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.pix-payment-card label {
+    display: block;
+    margin: 15px 0 7px;
+    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pix-copy-row {
+    display: flex;
+    gap: 9px;
+}
+
+.pix-copy-row input {
+    min-width: 0;
+    flex: 1;
+    padding: 11px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-light);
+}
+
+.pix-total-line {
+    margin-top: 14px;
+}
+
+.pix-total-line strong {
+    color: #32bcad;
+    font-size: 18px;
+}
+
+.pix-payment-help {
+    margin-top: 10px;
+    line-height: 1.5;
 }
 
 .delivery-details-box {
@@ -1986,6 +2309,13 @@ input:focus, select:focus, textarea:focus {
     flex-wrap: wrap;
 }
 
+.header-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .admin-card-description {
     font-size: 13px;
     color: var(--text-muted);
@@ -2112,6 +2442,12 @@ input:focus, select:focus, textarea:focus {
     background-color: rgba(76, 217, 100, 0.1);
     color: #4cd964;
     border: 1px solid rgba(76, 217, 100, 0.2);
+}
+
+.status-payment-failed {
+    background-color: rgba(255, 59, 48, 0.1);
+    color: #ff5a52;
+    border: 1px solid rgba(255, 59, 48, 0.22);
 }
 
 /* Tables Admin */
@@ -2373,8 +2709,64 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Modal de Autenticação */
+.auth-modal-card {
+    width: min(450px, calc(100vw - 32px));
+    max-width: 450px;
+    max-height: calc(100vh - 32px);
+    overflow: hidden;
+    transition: width 180ms ease, max-width 180ms ease;
+}
+
+.auth-modal-card.is-registering {
+    width: min(720px, calc(100vw - 32px));
+    max-width: 720px;
+}
+
+.auth-modal-content {
+    padding: 36px;
+}
+
 #auth-modal .form-grid {
     gap: 16px;
+}
+
+.register-intro {
+    max-width: 540px;
+    margin: -14px auto 22px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+    text-align: center;
+}
+
+#auth-modal .register-form-grid {
+    max-height: min(55vh, 520px);
+    overflow-y: auto;
+    padding: 2px 10px 4px 2px;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.register-confirmation {
+    margin-top: 2px;
+}
+
+#auth-modal .register-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+#auth-modal .register-checkbox input {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    accent-color: var(--accent-gold);
 }
 
 #auth-modal .form-group input {
@@ -2391,11 +2783,74 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--accent-gold);
 }
 
+.auth-status {
+    margin: 0 0 16px;
+    padding: 11px 13px;
+    border: 1px solid rgba(255, 196, 0, 0.35);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 196, 0, 0.08);
+    color: #f5d77a;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.auth-status.is-error {
+    border-color: rgba(255, 92, 92, 0.4);
+    background: rgba(255, 92, 92, 0.08);
+    color: #ffb0b0;
+}
+
+@media (max-width: 640px) {
+    .auth-modal-content {
+        padding: 30px 20px 22px;
+    }
+
+    #auth-modal .register-form-grid {
+        max-height: 58vh;
+    }
+
+    #auth-modal .register-form-grid > .form-group {
+        grid-column: span 12;
+    }
+}
+
 /* Área Minha Conta & Pedidos Clientes */
 .customer-orders-list {
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.customer-orders-overview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.customer-order-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.025);
+    text-align: center;
+}
+
+.customer-order-metric strong {
+    color: var(--accent-gold);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 20px;
+}
+
+.customer-order-metric span {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .customer-order-card {
@@ -2423,17 +2878,330 @@ input:focus, select:focus, textarea:focus {
 .customer-order-items {
     color: var(--text-muted);
     margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .customer-order-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+}
+
+.customer-order-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.customer-order-statuses {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.customer-order-status small {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.customer-orders-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 28px 18px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.customer-orders-empty strong {
+    color: var(--text-light);
+}
+
+.customer-cancel-order-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid rgba(200, 90, 68, 0.35);
+    border-radius: var(--radius-sm);
+    background: rgba(200, 90, 68, 0.06);
+    color: #e89b8a;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.customer-cancel-order-btn:hover {
+    background: rgba(200, 90, 68, 0.14);
+}
+
+.customer-cancellation-state,
+.customer-cancellation-support {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-radius: var(--radius-sm);
+    background: rgba(212, 175, 55, 0.06);
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.customer-cancellation-state strong,
+.customer-cancellation-support a {
+    color: var(--accent-gold);
+}
+
+.cancellation-modal-card {
+    width: min(520px, calc(100% - 32px));
+}
+
+.cancellation-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 36px;
+}
+
+.cancellation-modal-content h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+}
+
+.cancellation-modal-content p,
+.cancellation-legal-note {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.cancellation-eyebrow {
+    color: var(--accent-gold);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+.cancellation-modal-content textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-light);
+    font: inherit;
+}
+
+.cancellation-legal-note {
+    padding: 12px;
+    border-left: 3px solid var(--accent-gold);
+    background: rgba(212, 175, 55, 0.06);
+}
+
+.cancellation-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.cancellation-admin-card {
+    margin-bottom: 18px;
+}
+
+.admin-cancellations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 20px 20px;
+}
+
+.admin-cancellation-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px;
+    border: 1px solid rgba(212, 175, 55, 0.24);
+    border-radius: var(--radius-md);
+    background: rgba(212, 175, 55, 0.04);
+}
+
+.admin-cancellation-main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.admin-cancellation-main p {
+    margin: 0;
+}
+
+.admin-cancellation-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    color: var(--text-light);
+}
+
+.admin-cancellation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.admin-cancellations-empty {
+    padding: 18px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.status-cancellation {
+    border-color: rgba(200, 90, 68, 0.35) !important;
+    background: rgba(200, 90, 68, 0.1) !important;
+    color: #e89b8a !important;
+}
+
+.admin-order-preserved {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.account-locked-field {
+    opacity: 0.72;
+    cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+    .customer-orders-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-order-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .customer-order-status {
+        align-items: flex-start;
+    }
+
+    .customer-order-statuses {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .pix-only-option {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .admin-access-form {
+        grid-template-columns: 1fr;
+    }
+
+    .secure-payment-label {
+        margin-left: 58px;
+    }
+
+    .admin-cancellation-item,
+    .cancellation-modal-actions,
+    .admin-cancellation-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .cancellation-modal-content {
+        padding: 30px 20px 22px;
+    }
 }
 
 /* ==========================================================================
    ATENDIMENTO PELO WHATSAPP
    ========================================================================== */
+.floating-cart {
+    position: fixed;
+    right: 30px;
+    bottom: 92px;
+    z-index: 997;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 154px;
+    padding: 11px 15px;
+    border: 1px solid rgba(212, 175, 55, 0.55);
+    border-radius: 999px;
+    background: rgba(18, 18, 22, 0.96);
+    color: var(--text-light);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+    transition: transform var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.floating-cart:hover,
+.floating-cart:focus-visible {
+    border-color: var(--accent-gold);
+    background: var(--bg-tertiary);
+    transform: translateY(-2px);
+}
+
+.floating-cart-icon {
+    position: relative;
+    display: inline-flex;
+    color: var(--accent-gold);
+}
+
+.floating-cart-icon > span {
+    position: absolute;
+    top: -9px;
+    right: -10px;
+    display: grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--accent-terracota);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.floating-cart-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.15;
+}
+
+.floating-cart-copy strong {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.floating-cart-copy small {
+    margin-top: 3px;
+    color: var(--accent-gold);
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .whatsapp-float {
     position: fixed;
     right: 30px;
@@ -2540,6 +3308,10 @@ input:focus, select:focus, textarea:focus {
     .whatsapp-float {
         right: 16px;
         bottom: 76px;
+    }
+
+    .floating-cart {
+        display: none;
     }
 }
 
