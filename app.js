@@ -195,6 +195,7 @@ let adminRefreshToken = sessionStorage.getItem('mn_auth_refresh_token') || sessi
 let currentAuthUser = null;
 let ordersRealtimeChannel = null;
 let cancellationOrderId = '';
+let adminEditingOrderId = '';
 
 // Estado da compra atual (Checkout)
 let checkoutShippingState = null; // DF, SP, etc.
@@ -579,6 +580,16 @@ function setupEventListeners() {
     document.getElementById('close-cancellation-modal-btn').addEventListener('click', closeCancellationModal);
     document.getElementById('cancel-cancellation-request-btn').addEventListener('click', closeCancellationModal);
     document.getElementById('confirm-cancellation-request-btn').addEventListener('click', submitCancellationRequest);
+    document.getElementById('close-admin-order-edit-btn').addEventListener('click', closeAdminOrderEditor);
+    document.getElementById('cancel-admin-order-edit-btn').addEventListener('click', closeAdminOrderEditor);
+    document.getElementById('save-admin-order-edit-btn').addEventListener('click', saveAdminOrderEdit);
+    document.getElementById('admin-edit-shipping-cost').addEventListener('input', updateAdminEditTotal);
+    document.getElementById('admin-edit-state').addEventListener('input', event => {
+        event.target.value = event.target.value.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase();
+    });
+    document.getElementById('admin-edit-cep').addEventListener('input', event => {
+        event.target.value = formatCep(event.target.value);
+    });
 
     // Acesso ao Painel Admin
     document.getElementById('go-to-admin-btn').addEventListener('click', (e) => {
@@ -2563,6 +2574,228 @@ async function recordCancellationRefund(order) {
     });
 }
 
+function closeAdminOrderEditor() {
+    adminEditingOrderId = '';
+    document.getElementById('admin-order-edit-modal').classList.remove('active');
+}
+
+function getAdminEditItemPrice(productId, color, size, fallbackPrice) {
+    const variation = stock[`${productId}_${color}_${size}`];
+    return Number(variation?.price ?? fallbackPrice ?? 0);
+}
+
+function renderAdminEditItems(order) {
+    const container = document.getElementById('admin-edit-order-items');
+    container.innerHTML = order.items.map((item, index) => {
+        const product = products.find(entry => entry.id === item.productId);
+        const colors = product?.colors?.length ? product.colors : [item.color];
+        const sizes = product?.sizes?.length ? product.sizes : [item.size];
+        const price = getAdminEditItemPrice(item.productId, item.color, item.size, item.price);
+        return `
+            <div class="admin-edit-item-row" data-index="${index}" data-product-id="${escapeHtml(item.productId)}" data-price="${price}">
+                <div class="admin-edit-item-name">
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <span>${escapeHtml(product?.sku || item.sku || '')}</span>
+                </div>
+                <label>Cor
+                    <select data-field="color">
+                        ${colors.map(color => `<option value="${escapeHtml(color)}" ${color === item.color ? 'selected' : ''}>${escapeHtml(color)}</option>`).join('')}
+                    </select>
+                </label>
+                <label>Tamanho
+                    <select data-field="size">
+                        ${sizes.map(size => `<option value="${escapeHtml(size)}" ${size === item.size ? 'selected' : ''}>${escapeHtml(size)}</option>`).join('')}
+                    </select>
+                </label>
+                <label>Quantidade
+                    <input data-field="qty" type="number" min="1" max="99" value="${Math.max(1, Number(item.qty) || 1)}">
+                </label>
+                <span class="admin-edit-item-price" data-role="price">R$ ${price.toFixed(2).replace('.', ',')}</span>
+            </div>`;
+    }).join('');
+
+    container.querySelectorAll('select, input').forEach(control => {
+        control.addEventListener('change', event => {
+            const row = event.target.closest('.admin-edit-item-row');
+            const original = order.items[Number(row.dataset.index)];
+            const color = row.querySelector('[data-field="color"]').value;
+            const size = row.querySelector('[data-field="size"]').value;
+            const price = getAdminEditItemPrice(row.dataset.productId, color, size, original.price);
+            row.dataset.price = String(price);
+            row.querySelector('[data-role="price"]').textContent = `R$ ${price.toFixed(2).replace('.', ',')}`;
+            updateAdminEditTotal();
+        });
+        control.addEventListener('input', updateAdminEditTotal);
+    });
+}
+
+function updateAdminEditTotal() {
+    const order = orders.find(item => item.id === adminEditingOrderId);
+    if (!order) return;
+    const subtotal = [...document.querySelectorAll('#admin-edit-order-items .admin-edit-item-row')]
+        .reduce((sum, row) => sum + (Number(row.dataset.price) * Math.max(1, Number(row.querySelector('[data-field="qty"]').value) || 1)), 0);
+    const shippingCost = Math.max(0, Number(document.getElementById('admin-edit-shipping-cost').value) || 0);
+    const total = subtotal + shippingCost - (Number(order.discount) || 0);
+    document.getElementById('admin-edit-order-total').textContent = `R$ ${Math.max(0, total).toFixed(2).replace('.', ',')}`;
+}
+
+function openAdminOrderEditor(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order || order.status === 'cancelled' || order.cancellationStatus) return;
+    adminEditingOrderId = orderId;
+    document.getElementById('admin-edit-order-id').textContent = order.id;
+    document.getElementById('admin-edit-name').value = order.customer?.name || '';
+    document.getElementById('admin-edit-phone').value = order.customer?.phone || '';
+    document.getElementById('admin-edit-email').value = order.accountEmail || order.customer?.email || '';
+    document.getElementById('admin-edit-cep').value = order.customer?.cep || '';
+    document.getElementById('admin-edit-street').value = order.customer?.street || '';
+    document.getElementById('admin-edit-number').value = order.customer?.number || '';
+    document.getElementById('admin-edit-neighborhood').value = order.customer?.neighborhood || '';
+    document.getElementById('admin-edit-city').value = order.customer?.city || '';
+    document.getElementById('admin-edit-state').value = order.customer?.state || '';
+    document.getElementById('admin-edit-complement').value = order.customer?.complement || '';
+    document.getElementById('admin-edit-shipping-method').value = order.shippingMethod || 'PAC';
+    document.getElementById('admin-edit-shipping-cost').value = Number(order.shippingCost || 0).toFixed(2);
+    document.getElementById('admin-edit-note').value = order.adminNote || '';
+    renderAdminEditItems(order);
+    updateAdminEditTotal();
+    document.getElementById('admin-order-edit-modal').classList.add('active');
+}
+
+async function saveAdminOrderEdit() {
+    const order = orders.find(item => item.id === adminEditingOrderId);
+    const form = document.getElementById('admin-order-edit-form');
+    if (!order || !form.reportValidity()) return;
+
+    const rows = [...document.querySelectorAll('#admin-edit-order-items .admin-edit-item-row')];
+    const editedItems = rows.map(row => {
+        const original = order.items[Number(row.dataset.index)];
+        return {
+            ...original,
+            color: row.querySelector('[data-field="color"]').value,
+            size: row.querySelector('[data-field="size"]').value,
+            qty: Math.max(1, Number(row.querySelector('[data-field="qty"]').value) || 1),
+            price: Number(row.dataset.price) || Number(original.price) || 0
+        };
+    });
+    if (!editedItems.length) return alert('O pedido precisa ter pelo menos uma peça.');
+
+    const customer = {
+        ...order.customer,
+        name: document.getElementById('admin-edit-name').value.trim(),
+        phone: document.getElementById('admin-edit-phone').value.trim(),
+        email: document.getElementById('admin-edit-email').value.trim(),
+        cep: formatCep(document.getElementById('admin-edit-cep').value),
+        street: document.getElementById('admin-edit-street').value.trim(),
+        number: document.getElementById('admin-edit-number').value.trim(),
+        neighborhood: document.getElementById('admin-edit-neighborhood').value.trim(),
+        city: document.getElementById('admin-edit-city').value.trim(),
+        state: document.getElementById('admin-edit-state').value.trim().toUpperCase(),
+        complement: document.getElementById('admin-edit-complement').value.trim()
+    };
+    if (onlyDigits(customer.cep).length !== 8 || !/^[A-Z]{2}$/.test(customer.state)) {
+        alert('Revise o CEP e a UF antes de salvar.');
+        return;
+    }
+
+    const subtotal = editedItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const shippingCost = Math.max(0, Number(document.getElementById('admin-edit-shipping-cost').value) || 0);
+    const discount = Number(order.discount) || 0;
+    const updatedOrder = {
+        ...order,
+        customer,
+        items: editedItems,
+        subtotal,
+        shippingCost,
+        totalPrice: Math.max(0, subtotal + shippingCost - discount),
+        shippingMethod: document.getElementById('admin-edit-shipping-method').value,
+        adminNote: document.getElementById('admin-edit-note').value.trim(),
+        lastEditedAt: new Date().toISOString(),
+        lastEditedBy: currentAuthUser?.email || currentUser?.email || 'admin'
+    };
+
+    const button = document.getElementById('save-admin-order-edit-btn');
+    button.disabled = true;
+    button.textContent = 'Salvando...';
+    try {
+        await supabaseRequest(`/rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, {
+            method: 'PATCH', accessToken: adminAccessToken,
+            body: { order_data: updatedOrder }
+        });
+        orders = orders.map(item => item.id === order.id ? updatedOrder : item);
+        saveOrdersToStorage();
+        closeAdminOrderEditor();
+        renderAdminOrders();
+        renderAdminDashboard();
+        alert('Pedido atualizado. O cliente já pode ver as novas informações.');
+    } catch (error) {
+        alert(getFriendlyLoginError(error));
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Salvar alterações';
+    }
+}
+
+async function adminCancelOrder(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order || order.status === 'cancelled') return;
+    const reason = prompt('Motivo ou observação do cancelamento (opcional):');
+    if (reason === null) return;
+    const paid = order.paymentStatus === 'approved';
+    const warning = paid
+        ? 'Este pedido tem Pix confirmado. Ele será cancelado, mas o reembolso ainda deverá ser realizado e registrado. Continuar?'
+        : 'Cancelar este pedido agora? Ele continuará preservado no histórico.';
+    if (!confirm(warning)) return;
+
+    const paymentStatus = paid ? 'approved' : 'cancelled';
+    const cancelledAt = new Date().toISOString();
+    const updatedOrder = {
+        ...order,
+        status: 'cancelled',
+        paymentStatus,
+        adminCancellation: { reason: reason.trim(), cancelledAt, cancelledBy: currentAuthUser?.email || currentUser?.email || 'admin' }
+    };
+    try {
+        await supabaseRequest(`/rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, {
+            method: 'PATCH', accessToken: adminAccessToken,
+            body: { status: 'cancelled', payment_status: paymentStatus, order_data: updatedOrder }
+        });
+        orders = orders.map(item => item.id === order.id ? updatedOrder : item);
+        saveOrdersToStorage();
+        renderAdminOrders();
+        renderAdminDashboard();
+        alert(paid ? 'Pedido cancelado. O reembolso do Pix continua pendente.' : 'Pedido cancelado com sucesso.');
+    } catch (error) {
+        alert(getFriendlyLoginError(error));
+    }
+}
+
+async function adminMarkOrderRefunded(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order || order.status !== 'cancelled' || order.paymentStatus !== 'approved') return;
+    const reference = prompt('Informe o identificador ou referência do comprovante do Pix devolvido:');
+    if (!reference?.trim()) return;
+    if (!confirm(`Confirma o reembolso de R$ ${Number(order.totalPrice || 0).toFixed(2).replace('.', ',')}?`)) return;
+    const updatedOrder = {
+        ...order,
+        paymentStatus: 'refunded',
+        adminRefund: { reference: reference.trim(), refundedAt: new Date().toISOString(), refundedBy: currentAuthUser?.email || currentUser?.email || 'admin' }
+    };
+    try {
+        await supabaseRequest(`/rest/v1/orders?id=eq.${encodeURIComponent(order.id)}`, {
+            method: 'PATCH', accessToken: adminAccessToken,
+            body: { payment_status: 'refunded', order_data: updatedOrder }
+        });
+        orders = orders.map(item => item.id === order.id ? updatedOrder : item);
+        saveOrdersToStorage();
+        renderAdminOrders();
+        renderAdminDashboard();
+        alert('Reembolso registrado no pedido.');
+    } catch (error) {
+        alert(getFriendlyLoginError(error));
+    }
+}
+
 function renderAdminOrders() {
     const tbody = document.getElementById('admin-orders-tbody');
     const filterStatus = document.getElementById('filter-order-status').value;
@@ -2589,6 +2822,16 @@ function renderAdminOrders() {
         const dateObj = new Date(o.date);
         const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
 
+        const isLocked = Boolean(o.cancellationStatus || o.status === 'cancelled');
+        const actionButtons = o.status === 'cancelled'
+            ? (o.paymentStatus === 'approved'
+                ? `<button class="admin-order-action admin-order-refund" type="button" onclick="adminMarkOrderRefunded('${o.id}')">Registrar reembolso</button>`
+                : '<span class="status-badge status-cancellation">Cancelado</span>')
+            : o.cancellationStatus
+                ? `<span class="status-badge status-cancellation">${getCancellationStatusLabel(o.cancellationStatus)}</span>`
+                : `<button class="admin-order-action" type="button" onclick="openAdminOrderEditor('${o.id}')">Editar</button>
+                   <button class="admin-order-action admin-order-cancel" type="button" onclick="adminCancelOrder('${o.id}')">Cancelar</button>`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><span class="order-id-label">${o.id}</span></td>
@@ -2606,18 +2849,18 @@ function renderAdminOrders() {
                     `).join('')}
                 </div>
             </td>
-            <td><strong>R$ ${o.totalPrice.toFixed(2).replace('.', ',')}</strong></td>
+            <td><strong>R$ ${Number(o.totalPrice || 0).toFixed(2).replace('.', ',')}</strong></td>
             <td>${o.shippingMethod} - ${o.customer.city}/${o.customer.state}</td>
             <td>${dateStr}</td>
             <td>
-                <select class="admin-select" onchange="updateOrderPaymentStatus('${o.id}', this.value)" ${o.cancellationStatus ? 'disabled' : ''}>
+                <select class="admin-select" onchange="updateOrderPaymentStatus('${o.id}', this.value)" ${isLocked ? 'disabled' : ''}>
                     <option value="pending" ${o.paymentStatus === 'pending' ? 'selected' : ''}>Aguardando Pix</option>
                     <option value="approved" ${o.paymentStatus === 'approved' ? 'selected' : ''}>Pix confirmado</option>
                     <option value="refunded" ${o.paymentStatus === 'refunded' ? 'selected' : ''}>Reembolsado</option>
                 </select>
             </td>
             <td>
-                <select class="admin-select" onchange="updateOrderStatus('${o.id}', this.value)" ${o.cancellationStatus ? 'disabled' : ''}>
+                <select class="admin-select" onchange="updateOrderStatus('${o.id}', this.value)" ${isLocked ? 'disabled' : ''}>
                     <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>Pendente</option>
                     <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>Preparando</option>
                     <option value="shipped" ${o.status === 'shipped' ? 'selected' : ''}>Enviado</option>
@@ -2627,9 +2870,7 @@ function renderAdminOrders() {
             </td>
             <td>
                 <div class="actions-cell">
-                    ${o.cancellationStatus
-                        ? `<span class="status-badge status-cancellation">${getCancellationStatusLabel(o.cancellationStatus)}</span>`
-                        : '<span class="admin-order-preserved">Registro preservado</span>'}
+                    ${actionButtons}
                 </div>
             </td>
         `;

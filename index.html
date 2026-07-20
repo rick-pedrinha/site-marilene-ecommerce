@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260720-9">
+    <link rel="stylesheet" href="styles.css?v=20260720-10">
 </head>
 <body>
 
@@ -518,6 +518,89 @@
             </div>
         </div>
 
+        <div class="modal-overlay" id="admin-order-edit-modal">
+            <div class="modal-card admin-order-edit-card">
+                <button class="modal-close" id="close-admin-order-edit-btn" aria-label="Fechar">&times;</button>
+                <div class="admin-order-edit-content">
+                    <span class="cancellation-eyebrow">EDITAR PEDIDO <strong id="admin-edit-order-id"></strong></span>
+                    <h2>Alterar pedido</h2>
+                    <p class="admin-order-edit-help">Corrija as peças ou os dados de entrega. O cliente verá as alterações em Meus Pedidos.</p>
+
+                    <form id="admin-order-edit-form" onsubmit="event.preventDefault();">
+                        <h3>Peças</h3>
+                        <div id="admin-edit-order-items" class="admin-edit-order-items"></div>
+
+                        <h3>Cliente e entrega</h3>
+                        <div class="form-grid">
+                            <div class="form-group col-8">
+                                <label for="admin-edit-name">Nome do cliente</label>
+                                <input id="admin-edit-name" type="text" required>
+                            </div>
+                            <div class="form-group col-4">
+                                <label for="admin-edit-phone">Telefone</label>
+                                <input id="admin-edit-phone" type="tel" required>
+                            </div>
+                            <div class="form-group col-8">
+                                <label for="admin-edit-email">E-mail da conta</label>
+                                <input id="admin-edit-email" type="email" readonly>
+                            </div>
+                            <div class="form-group col-4">
+                                <label for="admin-edit-cep">CEP</label>
+                                <input id="admin-edit-cep" type="text" required maxlength="9">
+                            </div>
+                            <div class="form-group col-8">
+                                <label for="admin-edit-street">Rua / Logradouro</label>
+                                <input id="admin-edit-street" type="text" required>
+                            </div>
+                            <div class="form-group col-4">
+                                <label for="admin-edit-number">Número</label>
+                                <input id="admin-edit-number" type="text" required>
+                            </div>
+                            <div class="form-group col-5">
+                                <label for="admin-edit-neighborhood">Bairro</label>
+                                <input id="admin-edit-neighborhood" type="text" required>
+                            </div>
+                            <div class="form-group col-5">
+                                <label for="admin-edit-city">Cidade</label>
+                                <input id="admin-edit-city" type="text" required>
+                            </div>
+                            <div class="form-group col-2">
+                                <label for="admin-edit-state">UF</label>
+                                <input id="admin-edit-state" type="text" required maxlength="2">
+                            </div>
+                            <div class="form-group col-12">
+                                <label for="admin-edit-complement">Complemento (opcional)</label>
+                                <input id="admin-edit-complement" type="text">
+                            </div>
+                            <div class="form-group col-4">
+                                <label for="admin-edit-shipping-method">Forma de envio</label>
+                                <select id="admin-edit-shipping-method">
+                                    <option value="PAC">PAC</option>
+                                    <option value="SEDEX">SEDEX</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-4">
+                                <label for="admin-edit-shipping-cost">Valor do frete (R$)</label>
+                                <input id="admin-edit-shipping-cost" type="number" min="0" step="0.01" required>
+                            </div>
+                            <div class="form-group col-4">
+                                <label>Total atualizado</label>
+                                <strong id="admin-edit-order-total" class="admin-edit-order-total">R$ 0,00</strong>
+                            </div>
+                            <div class="form-group col-12">
+                                <label for="admin-edit-note">Observação administrativa (opcional)</label>
+                                <textarea id="admin-edit-note" rows="3" maxlength="1000" placeholder="Ex.: cliente pediu troca do tamanho M para G."></textarea>
+                            </div>
+                        </div>
+                        <div class="admin-order-edit-actions">
+                            <button class="btn btn-secondary" id="cancel-admin-order-edit-btn" type="button">Voltar</button>
+                            <button class="btn btn-primary" id="save-admin-order-edit-btn" type="button">Salvar alterações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <div class="modal-overlay" id="auth-modal">
             <div class="modal-card auth-modal-card">
                 <button class="modal-close" id="close-auth-modal-btn" aria-label="Fechar Modal">&times;</button>
@@ -971,6 +1054,6 @@
 
     <!-- Script de lógica -->
     <script src="vendor/supabase.js?v=2.110.7"></script>
-    <script src="app.js?v=20260720-13"></script>
+    <script src="app.js?v=20260720-14"></script>
 </body>
 </html>
