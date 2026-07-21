@@ -203,6 +203,7 @@ let ordersRealtimeChannel = null;
 let catalogRealtimeChannel = null;
 let catalogProductsRealtimeChannel = null;
 let adminNotificationToastTimer = null;
+const adminNotificationsStartedAt = Date.parse('2026-07-21T19:01:00.000Z');
 const catalogBroadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mn_catalog_sync_channel') : null;
 if (catalogBroadcastChannel) {
     catalogBroadcastChannel.onmessage = (event) => {
@@ -553,7 +554,12 @@ function getUnreadAdminOrders() {
     if (!adminSessionActive) return [];
     const seenIds = getSeenAdminOrderIds();
     return orders
-        .filter(order => order?.id && !seenIds.has(order.id))
+        .filter(order => {
+            const createdAt = new Date(order?.date).getTime();
+            return order?.id
+                && !seenIds.has(order.id)
+                && (!Number.isFinite(createdAt) || createdAt >= adminNotificationsStartedAt);
+        })
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
