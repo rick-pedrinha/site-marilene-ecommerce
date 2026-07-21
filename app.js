@@ -349,6 +349,94 @@ function formatCep(value) {
     return onlyDigits(value).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
 }
 
+const cepLookupCache = new Map();
+
+async function fetchAddressByCep(value) {
+    const cep = onlyDigits(value);
+    if (cep.length !== 8) throw new Error('Informe um CEP com 8 números.');
+    if (cepLookupCache.has(cep)) return cepLookupCache.get(cep);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal
+        });
+        if (!response.ok) throw new Error('Não foi possível consultar o CEP agora.');
+        const data = await response.json();
+        if (data?.erro) throw new Error('CEP não encontrado. Confira os números.');
+        cepLookupCache.set(cep, data);
+        return data;
+    } catch (error) {
+        if (error.name === 'AbortError') throw new Error('A consulta do CEP demorou demais. Tente novamente.');
+        throw error;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+function setCepLookupStatus(input, message, type = '') {
+    const group = input.closest('.form-group') || input.parentElement;
+    if (!group) return;
+    let status = group.querySelector('.cep-lookup-status');
+    if (!status) {
+        status = document.createElement('small');
+        status.className = 'cep-lookup-status';
+        status.setAttribute('aria-live', 'polite');
+        group.appendChild(status);
+    }
+    status.className = `cep-lookup-status ${type}`.trim();
+    status.textContent = message;
+}
+
+function fillFieldIfAvailable(fieldId, value) {
+    const field = document.getElementById(fieldId);
+    if (field && value) field.value = value;
+}
+
+async function lookupAndFillCep(config) {
+    const input = document.getElementById(config.cep);
+    if (!input || onlyDigits(input.value).length !== 8) return null;
+    input.value = formatCep(input.value);
+    input.setAttribute('aria-busy', 'true');
+    setCepLookupStatus(input, 'Buscando endereço...', 'loading');
+    try {
+        const data = await fetchAddressByCep(input.value);
+        fillFieldIfAvailable(config.street, data.logradouro);
+        fillFieldIfAvailable(config.neighborhood, data.bairro);
+        fillFieldIfAvailable(config.city, data.localidade);
+        fillFieldIfAvailable(config.state, data.uf);
+        const complement = document.getElementById(config.complement);
+        if (complement && !complement.value.trim() && data.complemento) complement.value = data.complemento;
+        setCepLookupStatus(input, 'Endereço encontrado e preenchido.', 'success');
+        if (typeof config.onSuccess === 'function') config.onSuccess(data);
+        return data;
+    } catch (error) {
+        setCepLookupStatus(input, error.message, 'error');
+        return null;
+    } finally {
+        input.removeAttribute('aria-busy');
+    }
+}
+
+function setupCepAutocomplete(config) {
+    const input = document.getElementById(config.cep);
+    if (!input) return;
+    let lookupTimer = null;
+    input.addEventListener('input', () => {
+        input.value = formatCep(input.value);
+        clearTimeout(lookupTimer);
+        if (onlyDigits(input.value).length === 8) {
+            lookupTimer = setTimeout(() => lookupAndFillCep(config), 300);
+        } else {
+            setCepLookupStatus(input, 'Digite os 8 números do CEP.');
+        }
+    });
+    input.addEventListener('blur', () => {
+        if (onlyDigits(input.value).length === 8) lookupAndFillCep(config);
+    });
+}
+
 function isValidCpf(value) {
     const cpf = onlyDigits(value);
     if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
@@ -706,6 +794,23 @@ function setupEventListeners() {
             calculateFreight();
         }
     });
+    setupCepAutocomplete({
+        cep: 'cust-cep', street: 'cust-street', neighborhood: 'cust-neighborhood',
+        city: 'cust-city', state: 'cust-state-uf', complement: 'cust-complement',
+        onSuccess: data => renderShippingOptionsForState(data.uf)
+    });
+    setupCepAutocomplete({
+        cep: 'reg-cep', street: 'reg-street', neighborhood: 'reg-neighborhood',
+        city: 'reg-city', state: 'reg-state', complement: 'reg-complement'
+    });
+    setupCepAutocomplete({
+        cep: 'prof-cep', street: 'prof-street', neighborhood: 'prof-neighborhood',
+        city: 'prof-city', state: 'prof-state', complement: 'prof-complement'
+    });
+    setupCepAutocomplete({
+        cep: 'admin-edit-cep', street: 'admin-edit-street', neighborhood: 'admin-edit-neighborhood',
+        city: 'admin-edit-city', state: 'admin-edit-state', complement: 'admin-edit-complement'
+    });
 
     // Submissão do Pedido
     document.getElementById('submit-order-btn').addEventListener('click', submitOrder);
@@ -739,9 +844,6 @@ function setupEventListeners() {
     document.getElementById('admin-edit-shipping-cost').addEventListener('input', updateAdminEditTotal);
     document.getElementById('admin-edit-state').addEventListener('input', event => {
         event.target.value = event.target.value.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase();
-    });
-    document.getElementById('admin-edit-cep').addEventListener('input', event => {
-        event.target.value = formatCep(event.target.value);
     });
 
     // Acesso ao Painel Admin
@@ -852,9 +954,6 @@ function setupEventListeners() {
     });
     document.getElementById('reg-phone').addEventListener('input', event => {
         event.target.value = formatPhone(event.target.value);
-    });
-    document.getElementById('reg-cep').addEventListener('input', event => {
-        event.target.value = formatCep(event.target.value);
     });
     document.getElementById('reg-state').addEventListener('input', event => {
         event.target.value = event.target.value.replace(/[^a-z]/gi, '').slice(0, 2).toUpperCase();
@@ -1365,53 +1464,67 @@ function removeFromCart(index) {
    CHECKOUT & CÁLCULO DE FRETE BRASILEIRO
    ========================================================================== */
 
-function calculateFreight() {
+async function calculateFreight() {
     const cepInput = document.getElementById('cust-cep').value.replace(/\D/g, '');
-    const stateInput = document.getElementById('cust-state');
-    const container = document.getElementById('shipping-options-container');
 
     if (cepInput.length !== 8) {
         alert('Por favor, insira um CEP válido com 8 dígitos.');
         return;
     }
 
+    const address = await lookupAndFillCep({
+        cep: 'cust-cep', street: 'cust-street', neighborhood: 'cust-neighborhood',
+        city: 'cust-city', state: 'cust-state-uf', complement: 'cust-complement'
+    });
     const cepNum = parseInt(cepInput);
-    let state = '';
+    let state = address?.uf || '';
 
-    if (cepNum >= 1000000 && cepNum <= 19999999) state = 'SP';
-    else if (cepNum >= 20000000 && cepNum <= 28999999) state = 'RJ';
-    else if (cepNum >= 29000000 && cepNum <= 29999999) state = 'ES';
-    else if (cepNum >= 30000000 && cepNum <= 39999999) state = 'MG';
-    else if (cepNum >= 40000000 && cepNum <= 48999999) state = 'BA';
-    else if (cepNum >= 49000000 && cepNum <= 49999999) state = 'SE';
-    else if (cepNum >= 50000000 && cepNum <= 56999999) state = 'PE';
-    else if (cepNum >= 57000000 && cepNum <= 57999999) state = 'AL';
-    else if (cepNum >= 58000000 && cepNum <= 58999999) state = 'PB';
-    else if (cepNum >= 59000000 && cepNum <= 59999999) state = 'RN';
-    else if (cepNum >= 60000000 && cepNum <= 63999999) state = 'CE';
-    else if (cepNum >= 64000000 && cepNum <= 64999999) state = 'PI';
-    else if (cepNum >= 65000000 && cepNum <= 65999999) state = 'MA';
-    else if (cepNum >= 66000000 && cepNum <= 68899999) state = 'PA';
-    else if (cepNum >= 68900000 && cepNum <= 68999999) state = 'AP';
-    else if (cepNum >= 69000000 && cepNum <= 69299999) state = 'AM';
-    else if (cepNum >= 69400000 && cepNum <= 69899999) state = 'AM';
-    else if (cepNum >= 69300000 && cepNum <= 69399999) state = 'RR';
-    else if (cepNum >= 69900000 && cepNum <= 69999999) state = 'AC';
-    else if (cepNum >= 70000000 && cepNum <= 72999999) state = 'DF';
-    else if (cepNum >= 73000000 && cepNum <= 76799999) state = 'GO';
-    else if (cepNum >= 76800000 && cepNum <= 76999999) state = 'RO';
-    else if (cepNum >= 77000000 && cepNum <= 77999999) state = 'TO';
-    else if (cepNum >= 78000000 && cepNum <= 78899999) state = 'MT';
-    else if (cepNum >= 78900000 && cepNum <= 78999999) state = 'RO';
-    else if (cepNum >= 79000000 && cepNum <= 79999999) state = 'MS';
-    else if (cepNum >= 80000000 && cepNum <= 87999999) state = 'PR';
-    else if (cepNum >= 88000000 && cepNum <= 89999999) state = 'SC';
-    else if (cepNum >= 90000000 && cepNum <= 99999999) state = 'RS';
-    else state = 'DF';
+    if (!state) {
+        if (cepNum >= 1000000 && cepNum <= 19999999) state = 'SP';
+        else if (cepNum >= 20000000 && cepNum <= 28999999) state = 'RJ';
+        else if (cepNum >= 29000000 && cepNum <= 29999999) state = 'ES';
+        else if (cepNum >= 30000000 && cepNum <= 39999999) state = 'MG';
+        else if (cepNum >= 40000000 && cepNum <= 48999999) state = 'BA';
+        else if (cepNum >= 49000000 && cepNum <= 49999999) state = 'SE';
+        else if (cepNum >= 50000000 && cepNum <= 56999999) state = 'PE';
+        else if (cepNum >= 57000000 && cepNum <= 57999999) state = 'AL';
+        else if (cepNum >= 58000000 && cepNum <= 58999999) state = 'PB';
+        else if (cepNum >= 59000000 && cepNum <= 59999999) state = 'RN';
+        else if (cepNum >= 60000000 && cepNum <= 63999999) state = 'CE';
+        else if (cepNum >= 64000000 && cepNum <= 64999999) state = 'PI';
+        else if (cepNum >= 65000000 && cepNum <= 65999999) state = 'MA';
+        else if (cepNum >= 66000000 && cepNum <= 68899999) state = 'PA';
+        else if (cepNum >= 68900000 && cepNum <= 68999999) state = 'AP';
+        else if (cepNum >= 69000000 && cepNum <= 69299999) state = 'AM';
+        else if (cepNum >= 69400000 && cepNum <= 69899999) state = 'AM';
+        else if (cepNum >= 69300000 && cepNum <= 69399999) state = 'RR';
+        else if (cepNum >= 69900000 && cepNum <= 69999999) state = 'AC';
+        else if (cepNum >= 70000000 && cepNum <= 72999999) state = 'DF';
+        else if (cepNum >= 73000000 && cepNum <= 76799999) state = 'GO';
+        else if (cepNum >= 76800000 && cepNum <= 76999999) state = 'RO';
+        else if (cepNum >= 77000000 && cepNum <= 77999999) state = 'TO';
+        else if (cepNum >= 78000000 && cepNum <= 78899999) state = 'MT';
+        else if (cepNum >= 78900000 && cepNum <= 78999999) state = 'RO';
+        else if (cepNum >= 79000000 && cepNum <= 79999999) state = 'MS';
+        else if (cepNum >= 80000000 && cepNum <= 87999999) state = 'PR';
+        else if (cepNum >= 88000000 && cepNum <= 89999999) state = 'SC';
+        else if (cepNum >= 90000000 && cepNum <= 99999999) state = 'RS';
+        else state = 'DF';
+    }
+
+    renderShippingOptionsForState(state);
+}
+
+function renderShippingOptionsForState(state) {
+    const stateInput = document.getElementById('cust-state');
+    const stateUfInput = document.getElementById('cust-state-uf');
+    const container = document.getElementById('shipping-options-container');
+    const rule = shippingRates[state];
+    if (!rule || !stateInput || !container) return;
 
     checkoutShippingState = state;
-    const rule = shippingRates[state];
     stateInput.value = `${state} - ${rule.region}`;
+    if (stateUfInput) stateUfInput.value = state;
 
     container.innerHTML = `
         <div class="shipping-option-card active" onclick="selectShippingOption('PAC', ${rule.pac.price})">
