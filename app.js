@@ -3102,6 +3102,39 @@ async function adminMarkOrderRefunded(orderId) {
     }
 }
 
+async function adminDeleteOrder(orderId) {
+    const order = orders.find(item => item.id === orderId);
+    if (!order || !adminSessionActive) return;
+    const paidWarning = order.paymentStatus === 'approved'
+        ? '\n\nEste pedido tem Pix confirmado. O estoque das peças será devolvido automaticamente.'
+        : '';
+    const typedId = prompt(
+        `Esta exclusão é permanente e o cliente também perderá o acesso ao pedido.${paidWarning}\n\nPara confirmar, digite exatamente: ${order.id}`
+    );
+    if (typedId === null) return;
+    if (typedId.trim() !== order.id) {
+        alert('O código digitado não corresponde ao pedido. Nada foi excluído.');
+        return;
+    }
+    try {
+        const result = await supabaseRequest('/rest/v1/rpc/admin_delete_order', {
+            method: 'POST', accessToken: adminAccessToken,
+            body: { target_order_id: order.id }
+        });
+        orders = orders.filter(item => item.id !== order.id);
+        saveOrdersToStorage();
+        renderAdminOrders();
+        renderAdminDashboard();
+        await syncCatalogFromServer();
+        const restored = Number(result?.restored_items) || 0;
+        alert(restored > 0
+            ? `Pedido ${order.id} excluído. ${restored} unidade(s) voltaram ao estoque.`
+            : `Pedido ${order.id} excluído definitivamente.`);
+    } catch (error) {
+        alert(getFriendlyLoginError(error));
+    }
+}
+
 function renderAdminOrders() {
     const tbody = document.getElementById('admin-orders-tbody');
     const filterStatus = document.getElementById('filter-order-status').value;
@@ -3132,7 +3165,7 @@ function renderAdminOrders() {
         const editButton = o.paymentStatus === 'approved'
             ? '<span class="status-badge status-delivered">Itens confirmados</span>'
             : `<button class="admin-order-action" type="button" onclick="openAdminOrderEditor('${o.id}')">Editar</button>`;
-        const actionButtons = o.status === 'cancelled'
+        const orderActionButtons = o.status === 'cancelled'
             ? (o.paymentStatus === 'approved'
                 ? `<button class="admin-order-action admin-order-refund" type="button" onclick="adminMarkOrderRefunded('${o.id}')">Registrar reembolso</button>`
                 : '<span class="status-badge status-cancellation">Cancelado</span>')
@@ -3140,6 +3173,8 @@ function renderAdminOrders() {
                 ? `<span class="status-badge status-cancellation">${getCancellationStatusLabel(o.cancellationStatus)}</span>`
                 : `${editButton}
                    <button class="admin-order-action admin-order-cancel" type="button" onclick="adminCancelOrder('${o.id}')">Cancelar</button>`;
+        const actionButtons = `${orderActionButtons}
+            <button class="admin-order-action admin-order-delete" type="button" onclick="adminDeleteOrder('${o.id}')">Excluir pedido</button>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `

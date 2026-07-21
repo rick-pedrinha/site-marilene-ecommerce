@@ -2728,6 +2728,16 @@ input:focus, select:focus, textarea:focus {
     color: #9bdcff;
 }
 
+.admin-order-delete {
+    border-color: rgba(255, 64, 64, 0.62);
+    background: rgba(130, 15, 15, 0.2);
+    color: #ff7777;
+}
+
+.admin-order-delete:hover {
+    background: rgba(180, 20, 20, 0.3);
+}
+
 /* Responsive fixes */
 @media (max-width: 900px) {
     .campaign-layout { grid-template-columns: 1fr 1fr; }
