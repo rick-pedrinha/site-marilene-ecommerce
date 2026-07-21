@@ -789,6 +789,23 @@
                     <!-- Cabeçalho Admin -->
                     <header class="admin-content-header">
                         <h2 id="admin-tab-title">Dashboard</h2>
+                        <div class="admin-notifications" id="admin-notifications">
+                            <button class="admin-notification-trigger" id="admin-notification-trigger" type="button" aria-label="Notifica&ccedil;&otilde;es de novos pedidos" aria-expanded="false">
+                                <span aria-hidden="true">&#128276;</span>
+                                <span class="admin-notification-label">Novos pedidos</span>
+                                <span class="admin-notification-count" id="admin-notification-count" hidden>0</span>
+                            </button>
+                            <div class="admin-notification-panel" id="admin-notification-panel" hidden>
+                                <div class="admin-notification-panel-header">
+                                    <div>
+                                        <strong>Notifica&ccedil;&otilde;es</strong>
+                                        <span id="admin-notification-summary">Nenhum pedido novo</span>
+                                    </div>
+                                    <button id="mark-all-notifications-read" type="button">Marcar todas como lidas</button>
+                                </div>
+                                <div class="admin-notification-list" id="admin-notification-list" aria-live="polite"></div>
+                            </div>
+                        </div>
                         <div class="admin-user-profile">
                             <span class="user-role">Administrador</span>
                             <div class="user-avatar">M</div>
@@ -1057,6 +1074,6 @@
 
     <!-- Script de lógica -->
     <script src="vendor/supabase.js?v=2.110.7"></script>
-    <script src="app.js?v=20260721-5"></script>
+    <script src="app.js?v=20260721-6"></script>
 </body>
 </html>

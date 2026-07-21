@@ -202,6 +202,7 @@ let currentAuthUser = null;
 let ordersRealtimeChannel = null;
 let catalogRealtimeChannel = null;
 let catalogProductsRealtimeChannel = null;
+let adminNotificationToastTimer = null;
 const catalogBroadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mn_catalog_sync_channel') : null;
 if (catalogBroadcastChannel) {
     catalogBroadcastChannel.onmessage = (event) => {
@@ -481,6 +482,7 @@ async function syncOrdersFromServer() {
         const rows = await supabaseRequest(path, { method: 'GET', accessToken: adminAccessToken });
         orders = Array.isArray(rows) ? rows.map(mapOrderRow) : [];
         saveOrdersToStorage();
+        if (adminSessionActive) renderAdminNotifications();
         if (adminSessionActive && document.getElementById('admin-view').classList.contains('active')) {
             renderAdminDashboard();
             renderAdminOrders();
@@ -520,8 +522,121 @@ function subscribeToOrdersRealtime() {
     if (ordersRealtimeChannel) supabaseClient.removeChannel(ordersRealtimeChannel);
     ordersRealtimeChannel = supabaseClient
         .channel(`orders-${currentAuthUser.id}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => syncOrdersFromServer())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async payload => {
+            await syncOrdersFromServer();
+            if (adminSessionActive && payload.eventType === 'INSERT') {
+                const newOrder = orders.find(order => order.id === payload.new?.id);
+                if (newOrder) showNewOrderNotification(newOrder);
+            }
+        })
         .subscribe();
+}
+
+function getAdminNotificationStorageKey() {
+    return `mn_admin_seen_orders_${currentAuthUser?.id || 'unknown'}`;
+}
+
+function getSeenAdminOrderIds() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(getAdminNotificationStorageKey()) || '[]');
+        return new Set(Array.isArray(saved) ? saved : []);
+    } catch (error) {
+        return new Set();
+    }
+}
+
+function saveSeenAdminOrderIds(seenIds) {
+    localStorage.setItem(getAdminNotificationStorageKey(), JSON.stringify(Array.from(seenIds).slice(-500)));
+}
+
+function getUnreadAdminOrders() {
+    if (!adminSessionActive) return [];
+    const seenIds = getSeenAdminOrderIds();
+    return orders
+        .filter(order => order?.id && !seenIds.has(order.id))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+function markAdminOrderNotificationsRead(orderId = '') {
+    const seenIds = getSeenAdminOrderIds();
+    if (orderId) seenIds.add(orderId);
+    else orders.forEach(order => order?.id && seenIds.add(order.id));
+    saveSeenAdminOrderIds(seenIds);
+    renderAdminNotifications();
+}
+
+function formatAdminNotificationDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(date);
+}
+
+function renderAdminNotifications() {
+    const countElement = document.getElementById('admin-notification-count');
+    const summaryElement = document.getElementById('admin-notification-summary');
+    const listElement = document.getElementById('admin-notification-list');
+    const markAllButton = document.getElementById('mark-all-notifications-read');
+    if (!countElement || !summaryElement || !listElement || !markAllButton) return;
+
+    const unreadOrders = getUnreadAdminOrders();
+    const unreadCount = unreadOrders.length;
+    countElement.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+    countElement.hidden = unreadCount === 0;
+    summaryElement.textContent = unreadCount === 0
+        ? 'Nenhum pedido novo'
+        : `${unreadCount} pedido${unreadCount === 1 ? '' : 's'} ainda n\u00e3o visto${unreadCount === 1 ? '' : 's'}`;
+    markAllButton.hidden = unreadCount === 0;
+
+    if (unreadCount === 0) {
+        listElement.innerHTML = '<div class="admin-notification-empty"><span>&#10003;</span><strong>Tudo em dia</strong><small>Os novos pedidos aparecer\u00e3o aqui automaticamente.</small></div>';
+        return;
+    }
+
+    listElement.innerHTML = unreadOrders.slice(0, 10).map(order => {
+        const itemCount = (Array.isArray(order.items) ? order.items : [])
+            .reduce((total, item) => total + (Number(item.qty) || 0), 0);
+        return `
+            <button class="admin-notification-item" type="button" data-order-id="${escapeHtml(order.id)}">
+                <span class="admin-notification-dot" aria-hidden="true"></span>
+                <span class="admin-notification-copy">
+                    <strong>Novo pedido ${escapeHtml(order.id)}</strong>
+                    <span>${escapeHtml(order.customer?.name || 'Cliente')} &middot; ${itemCount} pe\u00e7a${itemCount === 1 ? '' : 's'}</span>
+                    <small>${formatAdminNotificationDate(order.date)} &middot; R$ ${Number(order.totalPrice || 0).toFixed(2).replace('.', ',')}</small>
+                </span>
+            </button>`;
+    }).join('');
+}
+
+function openAdminOrderFromNotification(orderId) {
+    markAdminOrderNotificationsRead(orderId);
+    document.getElementById('admin-notification-panel').hidden = true;
+    document.getElementById('admin-notification-trigger').setAttribute('aria-expanded', 'false');
+    document.querySelector('[data-tab="admin-orders"]')?.click();
+    const orderRow = document.querySelector(`[data-admin-order-id="${CSS.escape(orderId)}"]`);
+    if (orderRow) {
+        orderRow.classList.add('admin-order-highlight');
+        orderRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => orderRow.classList.remove('admin-order-highlight'), 2400);
+    }
+}
+
+function showNewOrderNotification(order) {
+    renderAdminNotifications();
+    let toast = document.getElementById('admin-new-order-toast');
+    if (!toast) {
+        toast = document.createElement('button');
+        toast.id = 'admin-new-order-toast';
+        toast.className = 'admin-new-order-toast';
+        toast.type = 'button';
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = `<span>&#128276;</span><span><strong>Novo pedido recebido</strong><small>${escapeHtml(order.id)} &middot; ${escapeHtml(order.customer?.name || 'Cliente')}</small></span>`;
+    toast.onclick = () => openAdminOrderFromNotification(order.id);
+    requestAnimationFrame(() => toast.classList.add('active'));
+    clearTimeout(adminNotificationToastTimer);
+    adminNotificationToastTimer = setTimeout(() => toast.classList.remove('active'), 7000);
 }
 
 function subscribeToCatalogRealtime() {
@@ -903,6 +1018,28 @@ function setupEventListeners() {
     document.getElementById('filter-order-status').addEventListener('change', renderAdminOrders);
     document.getElementById('export-orders-csv-btn').addEventListener('click', downloadOrdersCsv);
     document.getElementById('refresh-orders-btn').addEventListener('click', refreshAdminOrders);
+
+    const notificationTrigger = document.getElementById('admin-notification-trigger');
+    const notificationPanel = document.getElementById('admin-notification-panel');
+    notificationTrigger.addEventListener('click', event => {
+        event.stopPropagation();
+        const willOpen = notificationPanel.hidden;
+        notificationPanel.hidden = !willOpen;
+        notificationTrigger.setAttribute('aria-expanded', String(willOpen));
+        if (willOpen) renderAdminNotifications();
+    });
+    notificationPanel.addEventListener('click', event => event.stopPropagation());
+    document.getElementById('mark-all-notifications-read').addEventListener('click', () => {
+        markAdminOrderNotificationsRead();
+    });
+    document.getElementById('admin-notification-list').addEventListener('click', event => {
+        const item = event.target.closest('[data-order-id]');
+        if (item) openAdminOrderFromNotification(item.dataset.orderId);
+    });
+    document.addEventListener('click', () => {
+        notificationPanel.hidden = true;
+        notificationTrigger.setAttribute('aria-expanded', 'false');
+    });
 
     // ==========================================
     // LISTENERS DE AUTENTICAÇÃO
@@ -2679,6 +2816,7 @@ function enterAdminPanel() {
     const dashboardTab = document.querySelector('[data-tab="admin-dashboard"]');
     if (dashboardTab) dashboardTab.click();
     renderAdminUsers();
+    renderAdminNotifications();
     syncOrdersFromServer();
 }
 
@@ -3290,6 +3428,7 @@ function renderAdminOrders() {
             <button class="admin-order-action admin-order-delete" type="button" onclick="adminDeleteOrder('${o.id}')">Excluir pedido</button>`;
 
         const tr = document.createElement('tr');
+        tr.setAttribute('data-admin-order-id', o.id);
         tr.innerHTML = `
             <td><span class="order-id-label">${escapeHtml(o.id)}</span></td>
             <td>
