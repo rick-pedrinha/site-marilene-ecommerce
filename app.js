@@ -202,6 +202,7 @@ let adminSessionActive = false;
 let adminAccessToken = sessionStorage.getItem('mn_auth_access_token') || sessionStorage.getItem('mn_admin_access_token') || '';
 let adminRefreshToken = sessionStorage.getItem('mn_auth_refresh_token') || sessionStorage.getItem('mn_admin_refresh_token') || '';
 let currentAuthUser = null;
+let passwordRecoveryToken = '';
 let ordersRealtimeChannel = null;
 let catalogRealtimeChannel = null;
 let catalogProductsRealtimeChannel = null;
@@ -311,6 +312,7 @@ function initApp() {
     
     // Configurar listeners gerais e sincronização em tempo real
     setupEventListeners();
+    handlePasswordRecoveryLink();
     subscribeToCatalogRealtime();
     syncCatalogFromServer();
     setInterval(syncCatalogFromServer, 8000);
@@ -1095,6 +1097,8 @@ function setupEventListeners() {
     // Ações de Login e Cadastro
     document.getElementById('submit-login-btn').addEventListener('click', submitLogin);
     document.getElementById('submit-register-btn').addEventListener('click', submitRegister);
+    document.getElementById('forgot-password-btn').addEventListener('click', requestPasswordReset);
+    document.getElementById('save-new-password-btn').addEventListener('click', saveNewPassword);
     document.getElementById('reg-cpf').addEventListener('input', event => {
         event.target.value = formatCpf(event.target.value);
     });
@@ -1971,8 +1975,9 @@ function openAuthModal() {
     setAuthStatus('');
     document.querySelector('#auth-modal .auth-modal-card')?.classList.remove('is-registering');
     document.getElementById('auth-modal').classList.add('active');
-    document.getElementById('login-container').style.display = 'block';
+    document.getElementById('login-container').style.display = passwordRecoveryToken ? 'none' : 'block';
     document.getElementById('register-container').style.display = 'none';
+    document.getElementById('password-reset-container').style.display = passwordRecoveryToken ? 'block' : 'none';
 }
 
 function closeAuthModal() {
@@ -2147,6 +2152,121 @@ async function sendPaymentConfirmationEmail(orderId) {
         throw error;
     }
     return payload;
+}
+
+async function requestPasswordReset() {
+    const emailInput = document.getElementById('login-email');
+    const email = normalizeEmail(emailInput.value);
+    if (!email || !emailInput.checkValidity()) {
+        setAuthStatus('Informe o e-mail da sua conta para receber o link de recuperação.');
+        emailInput.focus();
+        return;
+    }
+    if (!supabaseClient) {
+        setAuthStatus('A recuperação de senha está temporariamente indisponível.');
+        return;
+    }
+
+    const button = document.getElementById('forgot-password-btn');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Enviando link...';
+    setAuthStatus('');
+    try {
+        const redirectTo = `${window.location.origin}${window.location.pathname}`;
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+        setAuthStatus('Se este e-mail estiver cadastrado, o link para criar uma nova senha chegará em alguns minutos. Confira também o spam.', 'success');
+    } catch (error) {
+        setAuthStatus(getFriendlyLoginError(error));
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
+function showPasswordResetForm() {
+    document.querySelector('#auth-modal .auth-modal-card')?.classList.remove('is-registering');
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('register-container').style.display = 'none';
+    document.getElementById('password-reset-container').style.display = 'block';
+    document.getElementById('auth-modal').classList.add('active');
+    setAuthStatus('Link confirmado. Agora escolha sua nova senha.', 'success');
+    document.getElementById('new-password').focus();
+}
+
+async function handlePasswordRecoveryLink() {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const queryParams = new URLSearchParams(window.location.search);
+    const recoveryError = hashParams.get('error_description');
+
+    if (recoveryError) {
+        history.replaceState({}, document.title, window.location.pathname);
+        openAuthModal();
+        setAuthStatus('Este link de recuperação expirou ou já foi utilizado. Solicite um novo link.');
+        return;
+    }
+
+    if (hashParams.get('type') === 'recovery' && hashParams.get('access_token')) {
+        passwordRecoveryToken = hashParams.get('access_token');
+        history.replaceState({}, document.title, window.location.pathname);
+        showPasswordResetForm();
+        return;
+    }
+
+    const recoveryCode = queryParams.get('code');
+    if (!recoveryCode || !supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient.auth.exchangeCodeForSession(recoveryCode);
+        if (error || !data?.session?.access_token) throw error || new Error('Link inválido');
+        passwordRecoveryToken = data.session.access_token;
+        history.replaceState({}, document.title, window.location.pathname);
+        showPasswordResetForm();
+    } catch (error) {
+        history.replaceState({}, document.title, window.location.pathname);
+        openAuthModal();
+        setAuthStatus('Este link de recuperação expirou ou já foi utilizado. Solicite um novo link.');
+    }
+}
+
+async function saveNewPassword() {
+    const password = document.getElementById('new-password').value;
+    const confirmation = document.getElementById('new-password-confirm').value;
+    if (!passwordRecoveryToken) {
+        setAuthStatus('O link de recuperação não é mais válido. Solicite outro.');
+        return;
+    }
+    if (password.length < 8) {
+        setAuthStatus('A nova senha precisa ter pelo menos 8 caracteres.');
+        return;
+    }
+    if (password !== confirmation) {
+        setAuthStatus('As duas senhas não são iguais.');
+        return;
+    }
+
+    const button = document.getElementById('save-new-password-btn');
+    button.disabled = true;
+    button.textContent = 'Salvando...';
+    try {
+        await supabaseRequest('/auth/v1/user', {
+            method: 'PUT',
+            accessToken: passwordRecoveryToken,
+            body: { password },
+            retry: false
+        });
+        passwordRecoveryToken = '';
+        document.getElementById('password-reset-form').reset();
+        document.getElementById('password-reset-container').style.display = 'none';
+        document.getElementById('login-container').style.display = 'block';
+        setAuthStatus('Senha alterada com sucesso. Entre usando a nova senha.', 'success');
+        document.getElementById('login-password').focus();
+    } catch (error) {
+        setAuthStatus('Não foi possível alterar a senha. Solicite um novo link e tente novamente.');
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Salvar nova senha';
+    }
 }
 
 function saveAdminSession(payload) {

@@ -3214,6 +3214,39 @@ input[aria-busy="true"] {
     gap: 10px;
 }
 
+.forgot-password-link {
+    display: block;
+    margin: 9px 0 0 auto;
+    padding: 0;
+    color: var(--accent-gold);
+    background: transparent;
+    border: 0;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.forgot-password-link:hover { text-decoration: underline; }
+.forgot-password-link:disabled { opacity: .6; cursor: wait; }
+
+.password-reset-title {
+    margin-bottom: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.password-reset-intro {
+    margin: 0 auto 24px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+    text-align: center;
+}
+
+#password-reset-form .form-grid { margin-bottom: 22px; }
+
 .admin-order-edit-card {
     width: min(860px, calc(100vw - 32px));
     max-width: 860px;
