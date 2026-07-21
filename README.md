@@ -127,5 +127,10 @@ Se o provedor estiver indisponível, o Pix permanece confirmado e o administrado
 - Publicar os arquivos no Cloudflare Pages conectado ao branch `main`.
 - Executar `supabase/migrations/20260721_secure_order_creation.sql` para proteger preços, status e estoque.
 - Executar `supabase/migrations/20260721_admin_handover.sql` para habilitar a administração autônoma e a transferência segura de acesso.
+- Executar `supabase/migrations/20260721_catalog_products_media.sql` para permitir que administradores alterem nomes, descrições, fotos e vídeos pelo painel.
+
+### Edição de produtos e mídias
+
+Na aba **Produtos** do painel, use **Editar nome e mídia**. O administrador pode alterar nome, descrição e categoria, enviar uma foto para cada cor e adicionar um vídeo opcional. Os arquivos são armazenados no bucket público `product-media` do Supabase, com escrita restrita aos administradores ativos.
 - Testar um pedido real de baixo valor: cliente cria conta, fecha pedido, ADM confirma Pix, muda para Preparando e depois Enviado.
 - Entregar ao cliente apenas a URL da loja, os acessos individuais e um procedimento de backup; nunca entregar chaves de serviço do Supabase.

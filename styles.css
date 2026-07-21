@@ -2579,6 +2579,123 @@ input:focus, select:focus, textarea:focus {
     min-width: 150px;
 }
 
+.product-media-video {
+    background: #050505;
+    object-fit: cover;
+}
+
+.modal-product-img.product-media-video {
+    object-fit: contain;
+}
+
+.product-admin-edit-modal {
+    z-index: 4200;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.product-admin-edit-card {
+    position: relative;
+    width: min(860px, 100%);
+    max-height: none;
+    margin: auto;
+    padding: clamp(24px, 4vw, 42px);
+    overflow: visible;
+}
+
+.product-admin-edit-header {
+    margin-bottom: 24px;
+}
+
+.product-admin-edit-header > span {
+    color: var(--accent-gold);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+
+.product-admin-edit-header h2 {
+    margin: 6px 0;
+}
+
+.product-admin-edit-header p,
+.product-media-field small {
+    color: var(--text-muted);
+}
+
+.product-admin-edit-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.product-admin-edit-form > label,
+.product-media-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.product-admin-edit-form .full {
+    grid-column: 1 / -1;
+}
+
+.product-admin-edit-form label > span,
+.product-media-field > strong {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.product-admin-edit-form input,
+.product-admin-edit-form textarea {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    color: var(--text-light);
+    padding: 12px;
+    font: inherit;
+}
+
+.product-media-field {
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: rgba(255,255,255,.025);
+}
+
+.product-file-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px;
+    border: 1px dashed rgba(212,175,55,.55);
+    border-radius: var(--radius-sm);
+    color: var(--accent-gold);
+    cursor: pointer;
+}
+
+.product-file-picker input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.product-admin-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+@media (max-width: 700px) {
+    .product-admin-edit-form { grid-template-columns: 1fr; }
+    .product-admin-edit-form .full { grid-column: auto; }
+    .product-admin-edit-actions { flex-direction: column-reverse; }
+}
+
 [hidden] {
     display: none !important;
 }

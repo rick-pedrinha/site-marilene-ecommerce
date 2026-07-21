@@ -11,6 +11,9 @@ const initialProducts = [
         basePrice: 289.90,
         description: 'Moletom premium com capuz e bolso canguru, produzido em algodão de alta gramatura de toque macio. Estampa frontal artística combinando folhas de Espada de São Jorge em tons verdes orgânicos com tipografia autoral exclusiva. Símbolo de proteção, pertencimento e força espiritual que expressa a cultura popular brasileira.',
         imagePrefix: 'assets/hoodie_quem_protege',
+        imageWhiteUrl: 'assets/hoodie_quem_protege_branco.jpg',
+        imageBlackUrl: 'assets/hoodie_quem_protege_preto.jpg',
+        videoUrl: '',
         colors: ['Branco', 'Preto'],
         sizes: ['P', 'M', 'G', 'GG'],
         tag: 'Mais Vendido'
@@ -22,6 +25,9 @@ const initialProducts = [
         basePrice: 299.90,
         description: 'Moletom de alta qualidade com corte streetwear contemporâneo. A estampa traz a icônica silhueta de uma mulher negra com cabelo afro e flor vermelha exuberante, celebrando a identidade, força e legado das mulheres brasileiras. Uma peça de alta costura com significado social e estético.',
         imagePrefix: 'assets/hoodie_maria',
+        imageWhiteUrl: 'assets/hoodie_maria_branco.jpg',
+        imageBlackUrl: 'assets/hoodie_maria_preto.jpg',
+        videoUrl: '',
         colors: ['Branco', 'Preto'],
         sizes: ['P', 'M', 'G', 'GG'],
         tag: 'Coleção Raízes'
@@ -195,6 +201,7 @@ let adminRefreshToken = sessionStorage.getItem('mn_auth_refresh_token') || sessi
 let currentAuthUser = null;
 let ordersRealtimeChannel = null;
 let catalogRealtimeChannel = null;
+let catalogProductsRealtimeChannel = null;
 const catalogBroadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mn_catalog_sync_channel') : null;
 if (catalogBroadcastChannel) {
     catalogBroadcastChannel.onmessage = (event) => {
@@ -432,6 +439,7 @@ function subscribeToOrdersRealtime() {
 function subscribeToCatalogRealtime() {
     if (!supabaseClient) return;
     if (catalogRealtimeChannel) supabaseClient.removeChannel(catalogRealtimeChannel);
+    if (catalogProductsRealtimeChannel) supabaseClient.removeChannel(catalogProductsRealtimeChannel);
     catalogRealtimeChannel = supabaseClient
         .channel('public-catalog-stock')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_stock' }, payload => {
@@ -444,6 +452,37 @@ function subscribeToCatalogRealtime() {
             }
         })
         .subscribe();
+    catalogProductsRealtimeChannel = supabaseClient
+        .channel('public-catalog-products')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_products' }, () => {
+            syncCatalogFromServer();
+        })
+        .subscribe();
+}
+
+function applyCatalogProductsData(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return;
+    products = rows.filter(row => row.active !== false).map(row => {
+        const fallback = initialProducts.find(item => item.id === row.id) || {};
+        return {
+            ...fallback,
+            id: row.id,
+            sku: row.sku || fallback.sku || '',
+            name: row.name || fallback.name || 'Produto Marilene',
+            basePrice: Number(row.base_price) || fallback.basePrice || 0,
+            description: row.description || '',
+            tag: row.tag || '',
+            imagePrefix: fallback.imagePrefix || '',
+            imageWhiteUrl: row.image_white_url || fallback.imageWhiteUrl || '',
+            imageBlackUrl: row.image_black_url || fallback.imageBlackUrl || '',
+            videoUrl: row.video_url || '',
+            colors: Array.isArray(row.colors) && row.colors.length ? row.colors : (fallback.colors || ['Branco', 'Preto']),
+            sizes: Array.isArray(row.sizes) && row.sizes.length ? row.sizes : (fallback.sizes || ['P', 'M', 'G', 'GG'])
+        };
+    });
+    localStorage.setItem('mn_products', JSON.stringify(products));
+    renderProductGrid();
+    if (document.getElementById('admin-products')?.classList.contains('active')) renderAdminProducts();
 }
 
 function applyCatalogStockData(newStockMap, broadcast = true) {
@@ -524,7 +563,11 @@ async function syncCatalogFromServer() {
     // 1. Tentar obter dados do Supabase
     if (supabaseConfig.url && supabaseConfig.publicKey) {
         try {
-            const rows = await supabaseRequest('/rest/v1/catalog_stock?select=*', { method: 'GET', retry: false });
+            const [rows, productRows] = await Promise.all([
+                supabaseRequest('/rest/v1/catalog_stock?select=*', { method: 'GET', retry: false }),
+                supabaseRequest('/rest/v1/catalog_products?select=*&active=eq.true&order=created_at.asc', { method: 'GET', retry: false })
+            ]);
+            if (Array.isArray(productRows) && productRows.length > 0) applyCatalogProductsData(productRows);
             if (Array.isArray(rows) && rows.length > 0) {
                 syncedData = {};
                 rows.forEach(row => {
@@ -877,6 +920,23 @@ function setActiveMobileTab(activeEl) {
    APRESENTAÇÃO DOS PRODUTOS (VITRINE)
    ========================================================================== */
 
+function getProductImage(product, color = 'Branco') {
+    const configured = color === 'Preto' ? product.imageBlackUrl : product.imageWhiteUrl;
+    if (configured) return configured;
+    if (product.imagePrefix) return `${product.imagePrefix}_${color.toLowerCase()}.jpg`;
+    return 'https://placehold.co/600x600?text=Marilene';
+}
+
+function renderProductMedia(product, color, modal = false) {
+    const safeName = escapeHtml(product.name);
+    const safeImage = escapeHtml(getProductImage(product, color));
+    const videoUrl = String(product.videoUrl || '').trim();
+    if (videoUrl) {
+        return `<video class="${modal ? 'modal-product-img' : 'product-card-img'} product-media-video" ${modal ? 'controls' : 'autoplay muted loop'} playsinline preload="metadata" poster="${safeImage}" aria-label="Vídeo de ${safeName}"><source src="${escapeHtml(videoUrl)}"></video>`;
+    }
+    return `<img src="${safeImage}" alt="${safeName} na cor ${escapeHtml(color)}" class="${modal ? 'modal-product-img' : 'product-card-img'}" onerror="this.src='https://placehold.co/600x600?text=Marilene'">`;
+}
+
 function renderProductGrid() {
     const container = document.getElementById('products-list-container');
     if (!container) return;
@@ -908,19 +968,18 @@ function renderProductGrid() {
         const minPrice = variationPrices.length ? Math.min(...variationPrices) : p.basePrice;
 
         p.colors.forEach(color => {
-            const displayImage = `${p.imagePrefix}_${color.toLowerCase()}.jpg`;
             const card = document.createElement('article');
             card.className = `product-card${hasAdminAccess ? ' admin-product-card' : ''}`;
             card.innerHTML = `
-                <button class="product-card-image-box" onclick="openProductModal('${p.id}', '${color}')" aria-label="Ver ${p.name} na cor ${color}">
-                    <img src="${displayImage}" alt="${p.name} na cor ${color}" class="product-card-img" onerror="this.src='https://placehold.co/400x400?text=Moletom+Marilene'">
-                    <span class="product-card-badge">${p.tag || 'Exclusivo'}</span>
-                    <span class="product-card-color">${color}</span>
-                </button>
+                <div class="product-card-image-box">
+                    ${renderProductMedia(p, color)}
+                    <span class="product-card-badge">${escapeHtml(p.tag || 'Exclusivo')}</span>
+                    <span class="product-card-color">${escapeHtml(color)}</span>
+                </div>
                 <div class="product-card-content">
-                    <span class="product-eyebrow">SKU ${p.sku} · CASACO COM CAPUZ · ${color.toUpperCase()}</span>
-                    <h3 class="product-card-title">${p.name}</h3>
-                    <p class="product-card-desc">${p.description}</p>
+                    <span class="product-eyebrow">SKU ${escapeHtml(p.sku)} · CASACO COM CAPUZ · ${escapeHtml(color.toUpperCase())}</span>
+                    <h3 class="product-card-title">${escapeHtml(p.name)}</h3>
+                    <p class="product-card-desc">${escapeHtml(p.description)}</p>
                     <div class="product-payment-note">Pagamento direto por Pix</div>
                     <div class="product-card-footer">
                         <div><small>A partir de</small><span class="product-card-price">R$ ${minPrice.toFixed(2).replace('.', ',')}</span></div>
@@ -1047,23 +1106,21 @@ function openProductModal(productId, preferredColor = null) {
         const stockKey = `${p.id}_${selectedColor}_${selectedSize}`;
         const currentStock = stock[stockKey] ? stock[stockKey].qty : 0;
         const currentPrice = stock[stockKey] ? stock[stockKey].price : p.basePrice;
-        const imgPath = `${p.imagePrefix}_${selectedColor.toLowerCase()}.jpg`;
-
         modalContent.innerHTML = `
             <!-- Lado Imagem -->
             <div class="modal-image-side">
-                <img src="${imgPath}" alt="${p.name}" class="modal-product-img" id="modal-display-img" onerror="this.src='https://placehold.co/600x600?text=Moletom+${selectedColor}'">
+                ${renderProductMedia(p, selectedColor, true)}
             </div>
             
             <!-- Lado Informações -->
             <div class="modal-content-side">
                 <div>
-                    <span class="modal-product-tag">${p.tag || 'Novidade'}</span>
-                    <h2 class="modal-product-title">${p.name}</h2>
-                    <span class="modal-product-sku">SKU ${p.sku}</span>
+                    <span class="modal-product-tag">${escapeHtml(p.tag || 'Novidade')}</span>
+                    <h2 class="modal-product-title">${escapeHtml(p.name)}</h2>
+                    <span class="modal-product-sku">SKU ${escapeHtml(p.sku)}</span>
                 </div>
                 <div class="modal-product-price" id="modal-price-display">R$ ${currentPrice.toFixed(2).replace('.', ',')}</div>
-                <p class="modal-product-desc">${p.description}</p>
+                <p class="modal-product-desc">${escapeHtml(p.description)}</p>
                 
                 <!-- Escolha da Cor -->
                 <div>
@@ -1248,7 +1305,8 @@ function updateCartUI() {
     cart.forEach((item, index) => {
         const itemTotal = item.price * item.qty;
         subtotal += itemTotal;
-        const imgPath = `assets/hoodie_${item.productId === 'maria' ? 'maria' : (item.productId === 'quem-protege' ? 'quem_protege' : 'quem_protege')}_${item.color.toLowerCase()}.jpg`;
+        const cartProduct = products.find(product => product.id === item.productId);
+        const imgPath = cartProduct ? getProductImage(cartProduct, item.color) : 'https://placehold.co/100x100?text=MN';
         const stockKey = `${item.productId}_${item.color}_${item.size}`;
         const maxStock = stock[stockKey] ? stock[stockKey].qty : 0;
         const itemSku = item.sku || products.find(product => product.id === item.productId)?.sku || '';
@@ -2173,20 +2231,146 @@ function renderAdminProducts() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
-                <img src="${p.imagePrefix}_branco.jpg" alt="${p.name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm);" onerror="this.src='https://placehold.co/100x100?text=MN'">
+                <img src="${escapeHtml(getProductImage(p, 'Branco'))}" alt="${escapeHtml(p.name)}" style="width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-sm);" onerror="this.src='https://placehold.co/100x100?text=MN'">
             </td>
-            <td><strong>${p.sku}</strong></td>
-            <td><strong>${p.name}</strong></td>
+            <td><strong>${escapeHtml(p.sku)}</strong></td>
+            <td><strong>${escapeHtml(p.name)}</strong></td>
             <td>R$ ${p.basePrice.toFixed(2).replace('.', ',')}</td>
-            <td><span class="status-badge status-delivered">${p.tag || 'Comum'}</span></td>
+            <td><span class="status-badge status-delivered">${escapeHtml(p.tag || 'Comum')}</span></td>
             <td>
                 <div class="actions-cell">
-                    <button class="btn btn-secondary btn-small" onclick="deleteProductFromCatalog('${p.id}')" style="color:var(--accent-terracota); border-color:rgba(200,90,68,0.2);">Excluir</button>
+                    <button class="btn btn-primary btn-small" onclick="openProductEditor('${escapeHtml(p.id)}')">Editar nome e mídia</button>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function openProductEditor(productId) {
+    if (!adminSessionActive || currentUser?.role !== 'admin') return;
+    const product = products.find(item => item.id === productId);
+    if (!product) return;
+    document.getElementById('product-admin-edit-modal')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'product-admin-edit-modal';
+    modal.className = 'modal-overlay active product-admin-edit-modal';
+    modal.innerHTML = `
+        <div class="modal-card product-admin-edit-card" role="dialog" aria-modal="true" aria-labelledby="product-editor-title">
+            <button class="close-modal-btn" type="button" aria-label="Fechar editor" onclick="closeProductEditor()">×</button>
+            <div class="product-admin-edit-header">
+                <span>CATÁLOGO DA LOJA</span>
+                <h2 id="product-editor-title">Editar produto</h2>
+                <p>As alterações ficam disponíveis para todos os clientes.</p>
+            </div>
+            <div class="product-admin-edit-form" data-product-id="${escapeHtml(product.id)}">
+                <label><span>Nome do produto</span><input id="edit-prod-name" type="text" maxlength="150" value="${escapeHtml(product.name)}"></label>
+                <label><span>Selo ou categoria</span><input id="edit-prod-tag" type="text" maxlength="80" value="${escapeHtml(product.tag || '')}"></label>
+                <label class="full"><span>Descrição</span><textarea id="edit-prod-desc" rows="5" maxlength="2000">${escapeHtml(product.description)}</textarea></label>
+                <div class="product-media-field">
+                    <strong>Foto do produto branco</strong>
+                    <input id="edit-prod-white-url" type="url" value="${escapeHtml(product.imageWhiteUrl || '')}" placeholder="URL atual ou externa">
+                    <label class="product-file-picker"><span>Escolher nova foto</span><input id="edit-prod-white-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+                </div>
+                <div class="product-media-field">
+                    <strong>Foto do produto preto</strong>
+                    <input id="edit-prod-black-url" type="url" value="${escapeHtml(product.imageBlackUrl || '')}" placeholder="URL atual ou externa">
+                    <label class="product-file-picker"><span>Escolher nova foto</span><input id="edit-prod-black-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+                </div>
+                <div class="product-media-field full">
+                    <strong>Vídeo do produto (opcional)</strong>
+                    <input id="edit-prod-video-url" type="url" value="${escapeHtml(product.videoUrl || '')}" placeholder="Deixe vazio para mostrar somente as fotos">
+                    <label class="product-file-picker"><span>Escolher novo vídeo</span><input id="edit-prod-video-file" type="file" accept="video/mp4,video/webm,video/quicktime"></label>
+                    <small>Formatos: MP4, WebM ou MOV. Limite de 50 MB.</small>
+                </div>
+                <div class="product-admin-edit-actions full">
+                    <button class="btn btn-secondary" type="button" onclick="closeProductEditor()">Cancelar</button>
+                    <button class="btn btn-primary" id="save-product-editor-btn" type="button" onclick="saveProductEditor(this)">Salvar alterações</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+}
+
+function closeProductEditor() {
+    document.getElementById('product-admin-edit-modal')?.remove();
+}
+
+async function uploadProductMedia(file, productId, mediaKind) {
+    const isVideo = mediaKind === 'video';
+    if (file.size > 50 * 1024 * 1024) throw new Error('O arquivo ultrapassa o limite de 50 MB.');
+    if (isVideo && !file.type.startsWith('video/')) throw new Error('Escolha um arquivo de vídeo válido.');
+    if (!isVideo && !file.type.startsWith('image/')) throw new Error('Escolha uma imagem válida.');
+    const extension = String(file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const objectPath = `${productId}/${mediaKind}-${Date.now()}.${extension}`;
+    const response = await fetch(`${supabaseConfig.url}/storage/v1/object/product-media/${objectPath}`, {
+        method: 'POST',
+        headers: {
+            apikey: supabaseConfig.publicKey,
+            Authorization: `Bearer ${adminAccessToken}`,
+            'Content-Type': file.type || 'application/octet-stream',
+            'x-upsert': 'true'
+        },
+        body: file
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.message || payload?.error || 'Não foi possível enviar a mídia.');
+    return `${supabaseConfig.url}/storage/v1/object/public/product-media/${objectPath}`;
+}
+
+async function saveProductEditor(button) {
+    const form = button.closest('.product-admin-edit-form');
+    const product = products.find(item => item.id === form?.dataset.productId);
+    if (!product || !adminSessionActive || !adminAccessToken) {
+        alert('Sua sessão administrativa expirou.');
+        return;
+    }
+    const name = document.getElementById('edit-prod-name').value.trim();
+    const tag = document.getElementById('edit-prod-tag').value.trim();
+    const description = document.getElementById('edit-prod-desc').value.trim();
+    if (name.length < 3 || description.length < 10) {
+        alert('Informe um nome e uma descrição válidos.');
+        return;
+    }
+    button.disabled = true;
+    button.innerText = 'Enviando e salvando...';
+    try {
+        let imageWhiteUrl = document.getElementById('edit-prod-white-url').value.trim();
+        let imageBlackUrl = document.getElementById('edit-prod-black-url').value.trim();
+        let videoUrl = document.getElementById('edit-prod-video-url').value.trim();
+        const whiteFile = document.getElementById('edit-prod-white-file').files[0];
+        const blackFile = document.getElementById('edit-prod-black-file').files[0];
+        const videoFile = document.getElementById('edit-prod-video-file').files[0];
+        if (whiteFile) imageWhiteUrl = await uploadProductMedia(whiteFile, product.id, 'white');
+        if (blackFile) imageBlackUrl = await uploadProductMedia(blackFile, product.id, 'black');
+        if (videoFile) videoUrl = await uploadProductMedia(videoFile, product.id, 'video');
+        if (!imageWhiteUrl || !imageBlackUrl) throw new Error('Mantenha uma foto para cada cor do produto.');
+        const rows = await supabaseRequest(`/rest/v1/catalog_products?id=eq.${encodeURIComponent(product.id)}&select=*`, {
+            method: 'PATCH',
+            accessToken: adminAccessToken,
+            headers: { Prefer: 'return=representation' },
+            body: {
+                name,
+                tag,
+                description,
+                image_white_url: imageWhiteUrl,
+                image_black_url: imageBlackUrl,
+                video_url: videoUrl || null
+            }
+        });
+        if (!Array.isArray(rows) || !rows[0]) throw new Error('O produto não foi encontrado no catálogo online.');
+        Object.assign(product, {
+            name, tag, description, imageWhiteUrl, imageBlackUrl, videoUrl
+        });
+        localStorage.setItem('mn_products', JSON.stringify(products));
+        await syncCatalogFromServer();
+        closeProductEditor();
+        showStoreAdminNotice(`${name}: nome e mídia atualizados para todos.`);
+    } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.innerText = 'Salvar alterações';
+    }
 }
 
 function addProductToCatalog() {
