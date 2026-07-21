@@ -2305,17 +2305,18 @@ async function renderAdminUsers() {
             email.innerText = admin.email;
             copy.append(name, email);
             row.appendChild(copy);
-            if (admin.user_id !== currentAuthUser?.id) {
+            const isCurrentAdmin = admin.user_id === currentAuthUser?.id;
+            if (!isCurrentAdmin || admins.length > 1) {
                 const removeButton = document.createElement('button');
                 removeButton.type = 'button';
                 removeButton.className = 'btn btn-secondary btn-small';
-                removeButton.innerText = 'Remover acesso';
-                removeButton.addEventListener('click', () => removeAdminFromPanel(admin.email));
+                removeButton.innerText = isCurrentAdmin ? 'Transferir e remover meu acesso' : 'Remover acesso';
+                removeButton.addEventListener('click', () => removeAdminFromPanel(admin.email, isCurrentAdmin));
                 row.appendChild(removeButton);
             } else {
                 const currentBadge = document.createElement('span');
                 currentBadge.className = 'status-badge status-delivered';
-                currentBadge.innerText = 'Você';
+                currentBadge.innerText = 'Você · cadastre outro ADM para transferir';
                 row.appendChild(currentBadge);
             }
             container.appendChild(row);
@@ -2348,13 +2349,23 @@ async function addAdminFromPanel() {
     }
 }
 
-async function removeAdminFromPanel(email) {
-    if (!confirm(`Remover o acesso administrativo de ${email}?`)) return;
+async function removeAdminFromPanel(email, isCurrentAdmin = false) {
+    const warning = isCurrentAdmin
+        ? `Transferir a administração e remover definitivamente o seu acesso (${email})? Os outros administradores continuarão gerenciando preços, estoque e pagamentos.`
+        : `Remover o acesso administrativo de ${email}?`;
+    if (!confirm(warning)) return;
     try {
         await supabaseRequest('/rest/v1/rpc/set_admin_by_email', {
             method: 'POST', accessToken: adminAccessToken,
             body: { target_email: email, target_name: 'Administrador', enabled: false }
         });
+        if (isCurrentAdmin) {
+            clearAdminSession();
+            updateAuthUI();
+            navigateTo('store-view');
+            alert('Transferência concluída. Sua conta não possui mais acesso administrativo.');
+            return;
+        }
         await renderAdminUsers();
     } catch (error) {
         alert(error.message);

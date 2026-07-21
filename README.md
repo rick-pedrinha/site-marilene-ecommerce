@@ -71,10 +71,11 @@ O pagamento é confirmado manualmente; o site não entra na conta Nubank e não 
 ## Pedidos compartilhados e múltiplos administradores
 
 1. Abra o projeto `jlmzisqtashbdsppryso` no Supabase.
-2. Em **Authentication > Users**, confirme que `rickpedrinha@sempreceub.com` já existe e está com o e-mail confirmado. Se não existir, crie esse usuário antes de continuar.
+2. Em **Authentication > Users**, confirme que ao menos uma conta responsável pela loja já existe.
 3. Entre em **SQL Editor**, cole todo o arquivo `supabase/migrations/20260720_shared_orders_and_admins.sql` e execute uma vez. A migração encontra o usuário do passo anterior e ativa o acesso administrativo principal.
 4. Em **Authentication > URL Configuration**, use a URL publicada da loja como `Site URL` e adicione a mesma URL em `Redirect URLs`.
 5. Cada cliente cria sua própria conta na loja. Os pedidos ficam ligados ao usuário autenticado e só podem ser vistos por ele ou por um administrador ativo.
+6. Execute `supabase/migrations/20260721_admin_handover.sql` para permitir a transferência do acesso, remover o vínculo com um administrador fixo e restringir a confirmação de pagamentos aos administradores.
 6. Para liberar o amigo: ele cria uma conta comum, Rick entra no painel, informa o nome e e-mail em **Administradores da Loja** e clica em **Adicionar administrador**.
 7. O amigo entra usando a senha dele. Nunca compartilhe a senha principal do Rick.
 
@@ -121,9 +122,10 @@ Se o provedor estiver indisponível, o Pix permanece confirmado e o administrado
 
 - Configurar a chave Pix no `index.html`.
 - Executar a migração SQL do Supabase.
-- Confirmar que o e-mail administrativo principal está em `admin_users`.
+- Confirmar que os responsáveis pela operação estão cadastrados em `admin_users`.
 - Criar e promover a conta do segundo administrador.
 - Publicar os arquivos no Cloudflare Pages conectado ao branch `main`.
 - Executar `supabase/migrations/20260721_secure_order_creation.sql` para proteger preços, status e estoque.
+- Executar `supabase/migrations/20260721_admin_handover.sql` para habilitar a administração autônoma e a transferência segura de acesso.
 - Testar um pedido real de baixo valor: cliente cria conta, fecha pedido, ADM confirma Pix, muda para Preparando e depois Enviado.
 - Entregar ao cliente apenas a URL da loja, os acessos individuais e um procedimento de backup; nunca entregar chaves de serviço do Supabase.
