@@ -77,6 +77,9 @@ const shippingRates = {
     'TO': { region: 'Norte', pac: { price: 25.80, days: 7 }, sedex: { price: 44.50, days: 3 } }
 };
 
+// Prazo total informado ao cliente, incluindo produção e envio.
+const estimatedDeliveryDays = 30;
+
 // Histórico de pedidos seed para alimentar o painel admin inicialmente
 const initialOrders = [
     {
@@ -1707,7 +1710,7 @@ function renderShippingOptionsForState(state) {
                 <input type="radio" name="shipping-type" value="PAC" checked>
                 <div class="shipping-option-details">
                     <span class="shipping-option-title">PAC Correios</span>
-                    <span class="shipping-option-time">Entrega estimada em até ${rule.pac.days} dias úteis</span>
+                    <span class="shipping-option-time">Entrega estimada em até ${estimatedDeliveryDays} dias úteis</span>
                 </div>
             </div>
             <span class="shipping-option-price">R$ ${rule.pac.price.toFixed(2).replace('.', ',')}</span>
@@ -1718,7 +1721,7 @@ function renderShippingOptionsForState(state) {
                 <input type="radio" name="shipping-type" value="SEDEX">
                 <div class="shipping-option-details">
                     <span class="shipping-option-title">SEDEX Expresso</span>
-                    <span class="shipping-option-time">Entrega estimada em até ${rule.sedex.days} dias úteis</span>
+                    <span class="shipping-option-time">Entrega estimada em até ${estimatedDeliveryDays} dias úteis</span>
                 </div>
             </div>
             <span class="shipping-option-price">R$ ${rule.sedex.price.toFixed(2).replace('.', ',')}</span>
