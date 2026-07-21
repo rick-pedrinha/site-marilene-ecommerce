@@ -336,7 +336,7 @@ function formatPhone(value) {
     if (digits.length <= 10) {
         return digits.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
     }
-    return digits.replace(/(\d{5})(\d{4})(\d)/, '($1) $2-$3');
+    return digits.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
 }
 function formatCep(value) {
     return onlyDigits(value).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
@@ -402,17 +402,17 @@ async function syncOrdersFromServer() {
 
 async function createOrderOnServer(order) {
     if (!adminAccessToken || !currentAuthUser?.id) throw new Error('Faça login antes de finalizar o pedido.');
-    const rows = await supabaseRequest('/rest/v1/orders', {
+    const rows = await supabaseRequest('/rest/v1/rpc/create_store_order', {
         method: 'POST', accessToken: adminAccessToken,
-        headers: { Prefer: 'return=representation' },
         body: {
-            id: order.id,
-            user_id: currentAuthUser.id,
-            account_email: normalizeEmail(currentAuthUser.email),
-            order_data: order,
-            payment_status: order.paymentStatus,
-            status: order.status,
-            created_at: order.date
+            p_customer: order.customer,
+            p_items: order.items.map(item => ({
+                productId: item.productId,
+                color: item.color,
+                size: item.size,
+                qty: item.qty
+            })),
+            p_shipping_method: order.shippingMethod
         }
     });
     if (!Array.isArray(rows) || !rows[0]) throw new Error('O pedido não foi salvo no sistema.');
@@ -1492,6 +1492,14 @@ async function submitOrder() {
         alert('Por favor, preencha todos os campos obrigatórios do endereço e dados pessoais.');
         return;
     }
+    if (!isValidCpf(cpf)) {
+        alert('Informe um CPF válido para finalizar o pedido.');
+        return;
+    }
+    if (![10, 11].includes(onlyDigits(phone).length)) {
+        alert('Informe um telefone com DDD válido.');
+        return;
+    }
 
     if (!checkoutShippingMethod) {
         alert('Por favor, insira o CEP e selecione uma forma de envio.');
@@ -1546,12 +1554,6 @@ async function submitOrder() {
         const savedOrder = await createOrderOnServer(newOrder);
         orders = [savedOrder, ...orders.filter(order => order.id !== savedOrder.id)];
         saveOrdersToStorage();
-
-        cart.forEach(item => {
-            const key = `${item.productId}_${item.color}_${item.size}`;
-            stock[key].qty -= item.qty;
-        });
-        saveStockToStorage();
 
         cart = [];
         saveCartToStorage();
@@ -1790,7 +1792,11 @@ async function sendPaymentConfirmationEmail(orderId) {
         body: JSON.stringify({ orderId })
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(payload?.error || 'O e-mail de confirmação não foi enviado.');
+    if (!response.ok) {
+        const error = new Error(payload?.error || 'O e-mail de confirmação não foi enviado.');
+        error.status = response.status;
+        throw error;
+    }
     return payload;
 }
 
@@ -2114,12 +2120,12 @@ function renderCustomerOrdersHistory() {
         card.className = 'customer-order-card';
         card.innerHTML = `
             <div class="customer-order-header">
-                <span class="order-id-label">${o.id}</span>
+                <span class="order-id-label">${escapeHtml(o.id)}</span>
                 <span>${formattedDate}</span>
             </div>
             <div class="customer-order-items">
                 ${o.items.map(item => `
-                    <div>${item.name} (${item.color} - ${item.size}) x${item.qty}</div>
+                    <div>${escapeHtml(item.name)} (${escapeHtml(item.color)} - ${escapeHtml(item.size)}) x${Number(item.qty) || 0}</div>
                 `).join('')}
             </div>
             <div class="customer-order-footer">
@@ -2420,8 +2426,8 @@ function renderAdminDashboard() {
             row.className = 'recent-sale-row';
             row.innerHTML = `
                 <div class="recent-sale-left">
-                    <span class="recent-sale-cust">${o.customer.name}</span>
-                    <span class="recent-sale-time">${formattedDate} | Envio: ${o.shippingMethod}</span>
+                    <span class="recent-sale-cust">${escapeHtml(o.customer.name)}</span>
+                    <span class="recent-sale-time">${formattedDate} | Envio: ${escapeHtml(o.shippingMethod)}</span>
                 </div>
                 <div class="recent-sale-right">
                     <span class="recent-sale-val">R$ ${o.totalPrice.toFixed(2).replace('.', ',')}</span>
@@ -2928,34 +2934,37 @@ function renderAdminOrders() {
         const dateStr = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth() + 1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
 
         const isLocked = Boolean(o.cancellationStatus || o.status === 'cancelled');
+        const editButton = o.paymentStatus === 'approved'
+            ? '<span class="status-badge status-delivered">Itens confirmados</span>'
+            : `<button class="admin-order-action" type="button" onclick="openAdminOrderEditor('${o.id}')">Editar</button>`;
         const actionButtons = o.status === 'cancelled'
             ? (o.paymentStatus === 'approved'
                 ? `<button class="admin-order-action admin-order-refund" type="button" onclick="adminMarkOrderRefunded('${o.id}')">Registrar reembolso</button>`
                 : '<span class="status-badge status-cancellation">Cancelado</span>')
             : o.cancellationStatus
                 ? `<span class="status-badge status-cancellation">${getCancellationStatusLabel(o.cancellationStatus)}</span>`
-                : `<button class="admin-order-action" type="button" onclick="openAdminOrderEditor('${o.id}')">Editar</button>
+                : `${editButton}
                    <button class="admin-order-action admin-order-cancel" type="button" onclick="adminCancelOrder('${o.id}')">Cancelar</button>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><span class="order-id-label">${o.id}</span></td>
+            <td><span class="order-id-label">${escapeHtml(o.id)}</span></td>
             <td>
                 <div class="order-customer-meta">
-                    <strong>${o.customer.name}</strong>
-                    <span>${o.customer.email}</span>
-                    <span class="cust-phone-sub">${o.customer.phone}</span>
+                    <strong>${escapeHtml(o.customer.name)}</strong>
+                    <span>${escapeHtml(o.customer.email)}</span>
+                    <span class="cust-phone-sub">${escapeHtml(o.customer.phone)}</span>
                 </div>
             </td>
             <td>
                 <div class="order-items-meta">
                     ${o.items.map(item => `
-                        <span class="order-item-tag"><strong>${item.name}</strong> | Cor: ${item.color} | Tam: ${item.size} (x${item.qty})</span>
+                        <span class="order-item-tag"><strong>${escapeHtml(item.name)}</strong> | Cor: ${escapeHtml(item.color)} | Tam: ${escapeHtml(item.size)} (x${Number(item.qty) || 0})</span>
                     `).join('')}
                 </div>
             </td>
             <td><strong>R$ ${Number(o.totalPrice || 0).toFixed(2).replace('.', ',')}</strong></td>
-            <td>${o.shippingMethod} - ${o.customer.city}/${o.customer.state}</td>
+            <td>${escapeHtml(o.shippingMethod)} - ${escapeHtml(o.customer.city)}/${escapeHtml(o.customer.state)}</td>
             <td>${dateStr}</td>
             <td>
                 <select class="admin-select" onchange="updateOrderPaymentStatus('${o.id}', this.value)" ${isLocked ? 'disabled' : ''}>
@@ -3007,7 +3016,10 @@ async function updateOrderPaymentStatus(orderId, newStatus) {
                         : 'Pix confirmado e e-mail enviado ao cliente.';
                 alert(emailMessage);
             } catch (emailError) {
-                alert(`Pix confirmado, mas o e-mail ficou pendente: ${emailError.message}`);
+                const unavailable = [404, 503].includes(Number(emailError.status));
+                alert(unavailable
+                    ? 'Pix confirmado. O e-mail automático ainda não está configurado; avise o cliente pelo WhatsApp.'
+                    : `Pix confirmado, mas o e-mail ficou pendente: ${emailError.message}`);
             }
         }
     } catch (error) {

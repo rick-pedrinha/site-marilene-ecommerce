@@ -123,6 +123,7 @@ Se o provedor estiver indisponível, o Pix permanece confirmado e o administrado
 - Executar a migração SQL do Supabase.
 - Confirmar que o e-mail administrativo principal está em `admin_users`.
 - Criar e promover a conta do segundo administrador.
-- Publicar os arquivos no GitHub Pages.
+- Publicar os arquivos no Cloudflare Pages conectado ao branch `main`.
+- Executar `supabase/migrations/20260721_secure_order_creation.sql` para proteger preços, status e estoque.
 - Testar um pedido real de baixo valor: cliente cria conta, fecha pedido, ADM confirma Pix, muda para Preparando e depois Enviado.
 - Entregar ao cliente apenas a URL da loja, os acessos individuais e um procedimento de backup; nunca entregar chaves de serviço do Supabase.
