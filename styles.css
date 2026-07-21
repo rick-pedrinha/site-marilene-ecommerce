@@ -490,6 +490,7 @@ input:focus, select:focus, textarea:focus {
     color: var(--text-muted);
 }
 
+.store-admin-name-field,
 .store-admin-price-field,
 .store-admin-stock-grid label {
     display: flex;
@@ -497,12 +498,29 @@ input:focus, select:focus, textarea:focus {
     gap: 6px;
 }
 
+.store-admin-name-field > span,
 .store-admin-price-field > span,
 .store-admin-stock-grid label > span {
     color: var(--text-muted);
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
+}
+
+.store-admin-name-field small {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.store-admin-name-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-light);
+    font: 700 13px 'Outfit', sans-serif;
+    outline: none;
 }
 
 .store-admin-price-field > div {
@@ -542,6 +560,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .store-admin-price-input:focus,
+.store-admin-name-input:focus,
 .store-admin-qty-input:focus {
     border-color: var(--accent-gold);
 }

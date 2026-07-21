@@ -1192,7 +1192,7 @@ function renderProductGrid() {
         adminBanner.innerHTML = `
             <div>
                 <strong>Modo de edição rápida ativo</strong>
-                <span>Altere preço e estoque de cada cor diretamente nos cards abaixo.</span>
+                <span>Altere nome, preço e estoque diretamente nos cards abaixo, sem reenviar fotos.</span>
             </div>
             <button class="btn btn-secondary btn-small" type="button" onclick="enterAdminPanel()">Abrir painel completo</button>
         `;
@@ -1246,6 +1246,11 @@ function renderStoreAdminEditor(product, color) {
     return `
         <div class="store-admin-editor" data-product-id="${product.id}" data-color="${color}">
             <div class="store-admin-editor-title"><span>⚙ Edição ADM</span><small>${color}</small></div>
+            <label class="store-admin-name-field">
+                <span>Nome do produto</span>
+                <input type="text" class="store-admin-name-input" value="${escapeHtml(product.name)}" maxlength="150" aria-label="Nome do produto ${escapeHtml(product.name)}">
+                <small>As fotos e o vídeo atuais serão mantidos.</small>
+            </label>
             <label class="store-admin-price-field">
                 <span>Preço para esta cor</span>
                 <div><strong>R$</strong><input type="number" class="store-admin-price-input" value="${price.toFixed(2)}" min="0" step="0.01" inputmode="decimal"></div>
@@ -1255,7 +1260,7 @@ function renderStoreAdminEditor(product, color) {
                     <label><span>${size}</span><input type="number" class="store-admin-qty-input" data-size="${size}" value="${colorStock[index].qty}" min="0" step="1" inputmode="numeric" aria-label="Quantidade tamanho ${size}"></label>
                 `).join('')}
             </div>
-            <button class="btn btn-primary btn-block btn-small" type="button" onclick="saveStoreAdminChanges(this)">Salvar preço e quantidades</button>
+            <button class="btn btn-primary btn-block btn-small" type="button" onclick="saveStoreAdminChanges(this)">Salvar nome, preço e quantidades</button>
         </div>
     `;
 }
@@ -1269,9 +1274,16 @@ async function saveStoreAdminChanges(button) {
     const editor = button.closest('.store-admin-editor');
     const product = products.find(item => item.id === editor?.dataset.productId);
     const color = editor?.dataset.color;
+    const nameInput = editor?.querySelector('.store-admin-name-input');
+    const productName = String(nameInput?.value || '').trim();
     const priceInput = editor?.querySelector('.store-admin-price-input');
     const price = Number(String(priceInput?.value || '').replace(',', '.'));
-    if (!product || !color || !Number.isFinite(price) || price <= 0) {
+    if (!product || !color || productName.length < 3) {
+        alert('Digite um nome de produto com pelo menos 3 caracteres.');
+        nameInput?.focus();
+        return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
         alert('Digite um preço válido maior que zero.');
         return;
     }
@@ -1293,8 +1305,21 @@ async function saveStoreAdminChanges(button) {
     button.disabled = true;
     button.innerText = 'Salvando...';
     let serverSynced = false;
+    let nameSynced = productName === product.name;
     if (adminAccessToken && supabaseConfig.url) {
         try {
+            if (!nameSynced) {
+                const productRows = await supabaseRequest(`/rest/v1/catalog_products?id=eq.${encodeURIComponent(product.id)}&select=id,name`, {
+                    method: 'PATCH',
+                    accessToken: adminAccessToken,
+                    headers: { Prefer: 'return=representation' },
+                    body: { name: productName }
+                });
+                if (!Array.isArray(productRows) || !productRows[0]) {
+                    throw new Error('O produto não foi encontrado no catálogo online.');
+                }
+                nameSynced = true;
+            }
             await supabaseRequest('/rest/v1/catalog_stock', {
                 method: 'POST',
                 accessToken: adminAccessToken,
@@ -1314,12 +1339,19 @@ async function saveStoreAdminChanges(button) {
     } catch (error) { /* Node nao rodando */ }
     const updatedMap = {};
     supabaseRows.forEach(row => { updatedMap[row.key] = { price: row.price, qty: row.qty }; });
+    if (nameSynced) {
+        product.name = productName;
+        localStorage.setItem('mn_products', JSON.stringify(products));
+    }
     applyCatalogStockData(updatedMap);
+    renderProductGrid();
     showStoreAdminNotice(
-        serverSynced
-            ? `${product.name} (${color}): preço e estoque atualizados para todos em tempo real.`
-            : 'Alteração salva localmente. Sincronize o banco para propagar online.',
-        !serverSynced
+        serverSynced && nameSynced
+            ? `${product.name} (${color}): nome, preço e estoque atualizados. As fotos foram mantidas.`
+            : nameSynced
+                ? `${product.name}: nome salvo, mas preço ou estoque podem estar apenas neste aparelho.`
+                : 'Não foi possível salvar o novo nome. Tente novamente.',
+        !serverSynced || !nameSynced
     );
 }
 
