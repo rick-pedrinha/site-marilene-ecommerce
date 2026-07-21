@@ -194,6 +194,15 @@ let adminAccessToken = sessionStorage.getItem('mn_auth_access_token') || session
 let adminRefreshToken = sessionStorage.getItem('mn_auth_refresh_token') || sessionStorage.getItem('mn_admin_refresh_token') || '';
 let currentAuthUser = null;
 let ordersRealtimeChannel = null;
+let catalogRealtimeChannel = null;
+const catalogBroadcastChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('mn_catalog_sync_channel') : null;
+if (catalogBroadcastChannel) {
+    catalogBroadcastChannel.onmessage = (event) => {
+        if (event.data?.type === 'CATALOG_UPDATED' && event.data?.stock) {
+            applyCatalogStockData(event.data.stock, false);
+        }
+    };
+}
 let cancellationOrderId = '';
 let adminEditingOrderId = '';
 
@@ -288,9 +297,11 @@ function initApp() {
     updateAuthUI();
     restoreAdminSession();
     
-    // Configurar listeners gerais
+    // Configurar listeners gerais e sincronização em tempo real
     setupEventListeners();
+    subscribeToCatalogRealtime();
     syncCatalogFromServer();
+    setInterval(syncCatalogFromServer, 8000);
 }
 
 function saveStockToStorage() {
@@ -325,9 +336,8 @@ function formatPhone(value) {
     if (digits.length <= 10) {
         return digits.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
     }
-    return digits.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
+    return digits.replace(/(\d{5})(\d{4})(\d)/, '($1) $2-$3');
 }
-
 function formatCep(value) {
     return onlyDigits(value).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
 }
@@ -419,6 +429,80 @@ function subscribeToOrdersRealtime() {
         .subscribe();
 }
 
+function subscribeToCatalogRealtime() {
+    if (!supabaseClient) return;
+    if (catalogRealtimeChannel) supabaseClient.removeChannel(catalogRealtimeChannel);
+    catalogRealtimeChannel = supabaseClient
+        .channel('public-catalog-stock')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_stock' }, payload => {
+            if (payload.new && payload.new.key) {
+                applyCatalogStockData({
+                    [payload.new.key]: { price: Number(payload.new.price), qty: Number(payload.new.qty) }
+                });
+            } else {
+                syncCatalogFromServer();
+            }
+        })
+        .subscribe();
+}
+
+function applyCatalogStockData(newStockMap, broadcast = true) {
+    if (!newStockMap || typeof newStockMap !== 'object') return;
+    let changed = false;
+    Object.keys(newStockMap).forEach(key => {
+        const item = newStockMap[key];
+        if (item && typeof item === 'object') {
+            const price = Number(item.price);
+            const qty = Number(item.qty);
+            if (Number.isFinite(price) && price > 0 && Number.isInteger(qty) && qty >= 0) {
+                if (!stock[key] || stock[key].price !== price || stock[key].qty !== qty) {
+                    stock[key] = { price: Number(price.toFixed(2)), qty };
+                    changed = true;
+                }
+            }
+        }
+    });
+
+    if (!changed) return;
+
+    products.forEach(p => {
+        const variationPrices = [];
+        p.colors.forEach(col => {
+            p.sizes.forEach(sz => {
+                const item = stock[`${p.id}_${col}_${sz}`];
+                if (item && Number.isFinite(Number(item.price)) && Number(item.price) > 0) {
+                    variationPrices.push(Number(item.price));
+                }
+            });
+        });
+        if (variationPrices.length > 0) {
+            p.basePrice = Math.min(...variationPrices);
+        }
+    });
+
+    localStorage.setItem('mn_products', JSON.stringify(products));
+    saveStockToStorage();
+
+    // Atualizar preços no carrinho
+    cart = cart.map(item => {
+        const officialItem = stock[`${item.productId}_${item.color}_${item.size}`];
+        return officialItem ? { ...item, price: officialItem.price } : item;
+    });
+    saveCartToStorage();
+
+    renderProductGrid();
+    updateCartUI();
+
+    const activeTab = document.querySelector('.admin-nav-item.active')?.dataset.tab;
+    if (activeTab === 'admin-stock') {
+        renderAdminStock();
+    }
+
+    if (broadcast && catalogBroadcastChannel) {
+        try { catalogBroadcastChannel.postMessage({ type: 'CATALOG_UPDATED', stock }); } catch (e) {}
+    }
+}
+
 async function backendApiRequest(path, options = {}) {
     const response = await fetch(`${backendConfig.apiUrl}${path}`, {
         ...options,
@@ -435,20 +519,40 @@ async function backendApiRequest(path, options = {}) {
 }
 
 async function syncCatalogFromServer() {
-    try {
-        const payload = await backendApiRequest('/api/catalog');
-        if (!payload?.stock || typeof payload.stock !== 'object') return;
-        stock = { ...stock, ...payload.stock };
-        cart = cart.map(item => {
-            const officialItem = stock[`${item.productId}_${item.color}_${item.size}`];
-            return officialItem ? { ...item, price: officialItem.price } : item;
-        });
-        saveStockToStorage();
-        saveCartToStorage();
-        renderProductGrid();
-        updateCartUI();
-    } catch (error) {
-        // No GitHub Pages sem backend publicado, o catálogo local continua disponível.
+    let syncedData = null;
+
+    // 1. Tentar obter dados do Supabase
+    if (supabaseConfig.url && supabaseConfig.publicKey) {
+        try {
+            const rows = await supabaseRequest('/rest/v1/catalog_stock?select=*', { method: 'GET', retry: false });
+            if (Array.isArray(rows) && rows.length > 0) {
+                syncedData = {};
+                rows.forEach(row => {
+                    if (row.key && row.price !== undefined && row.qty !== undefined) {
+                        syncedData[row.key] = { price: Number(row.price), qty: Number(row.qty) };
+                    }
+                });
+            }
+        } catch (error) {
+            // Supabase offline ou tabela ainda não criada
+        }
+    }
+
+    // 2. Tentar obter do servidor Node local caso o Supabase não tenha retornado
+    if (!syncedData) {
+        try {
+            const payload = await backendApiRequest('/api/catalog');
+            if (payload?.stock && typeof payload.stock === 'object') {
+                syncedData = payload.stock;
+            }
+        } catch (error) {
+            // Servidor Node não está rodando
+        }
+    }
+
+    // 3. Aplicar alterações no estado da aplicação
+    if (syncedData) {
+        applyCatalogStockData(syncedData);
     }
 }
 
@@ -794,7 +898,6 @@ function renderProductGrid() {
     }
 
     products.forEach(p => {
-        // Encontrar preço mínimo real nas variações de estoque.
         const variationPrices = [];
         p.colors.forEach(col => {
             p.sizes.forEach(sz => {
@@ -830,7 +933,7 @@ function renderProductGrid() {
         });
     });
 
-    document.getElementById('add-admin-btn').addEventListener('click', addAdminFromPanel);
+    document.getElementById('add-admin-btn')?.addEventListener('click', addAdminFromPanel);
 }
 
 function renderStoreAdminEditor(product, color) {
@@ -839,23 +942,16 @@ function renderStoreAdminEditor(product, color) {
         return stock[key] || { qty: 0, price: product.basePrice };
     });
     const price = colorStock.length ? Math.min(...colorStock.map(item => Number(item.price) || 0)) : product.basePrice;
-
     return `
         <div class="store-admin-editor" data-product-id="${product.id}" data-color="${color}">
-            <div class="store-admin-editor-title">
-                <span>⚙ Edição ADM</span>
-                <small>${color}</small>
-            </div>
+            <div class="store-admin-editor-title"><span>⚙ Edição ADM</span><small>${color}</small></div>
             <label class="store-admin-price-field">
                 <span>Preço para esta cor</span>
                 <div><strong>R$</strong><input type="number" class="store-admin-price-input" value="${price.toFixed(2)}" min="0" step="0.01" inputmode="decimal"></div>
             </label>
             <div class="store-admin-stock-grid">
                 ${product.sizes.map((size, index) => `
-                    <label>
-                        <span>${size}</span>
-                        <input type="number" class="store-admin-qty-input" data-size="${size}" value="${colorStock[index].qty}" min="0" step="1" inputmode="numeric" aria-label="Quantidade tamanho ${size}">
-                    </label>
+                    <label><span>${size}</span><input type="number" class="store-admin-qty-input" data-size="${size}" value="${colorStock[index].qty}" min="0" step="1" inputmode="numeric" aria-label="Quantidade tamanho ${size}"></label>
                 `).join('')}
             </div>
             <button class="btn btn-primary btn-block btn-small" type="button" onclick="saveStoreAdminChanges(this)">Salvar preço e quantidades</button>
@@ -869,19 +965,18 @@ async function saveStoreAdminChanges(button) {
         updateAuthUI();
         return;
     }
-
     const editor = button.closest('.store-admin-editor');
     const product = products.find(item => item.id === editor?.dataset.productId);
     const color = editor?.dataset.color;
     const priceInput = editor?.querySelector('.store-admin-price-input');
     const price = Number(String(priceInput?.value || '').replace(',', '.'));
-
     if (!product || !color || !Number.isFinite(price) || price <= 0) {
         alert('Digite um preço válido maior que zero.');
         return;
     }
-
     const quantityInputs = editor.querySelectorAll('.store-admin-qty-input');
+    const variations = [];
+    const supabaseRows = [];
     for (const input of quantityInputs) {
         const quantity = Number(input.value);
         if (!Number.isInteger(quantity) || quantity < 0) {
@@ -889,50 +984,40 @@ async function saveStoreAdminChanges(button) {
             input.focus();
             return;
         }
+        const size = input.dataset.size;
+        const key = `${product.id}_${color}_${size}`;
+        variations.push({ size, qty: quantity, price });
+        supabaseRows.push({ key, product_id: product.id, color, size, price, qty: quantity });
     }
-
     button.disabled = true;
     button.innerText = 'Salvando...';
     let serverSynced = false;
+    if (adminAccessToken && supabaseConfig.url) {
+        try {
+            await supabaseRequest('/rest/v1/catalog_stock', {
+                method: 'POST',
+                accessToken: adminAccessToken,
+                headers: { 'Prefer': 'resolution=merge-duplicates' },
+                body: supabaseRows
+            });
+            serverSynced = true;
+        } catch (error) { console.warn('Falha ao salvar no Supabase:', error.message); }
+    }
     try {
         await backendApiRequest('/api/admin/catalog', {
             method: 'PUT',
             headers: { Authorization: `Bearer ${adminAccessToken}` },
-            body: JSON.stringify({
-                productId: product.id,
-                color,
-                variations: Array.from(quantityInputs).map(input => ({
-                    size: input.dataset.size,
-                    qty: Number(input.value),
-                    price
-                }))
-            })
+            body: JSON.stringify({ productId: product.id, color, variations })
         });
         serverSynced = true;
-    } catch (error) {
-        console.warn('Catálogo salvo apenas neste navegador:', error.message);
-    }
-
-    quantityInputs.forEach(input => {
-        const size = input.dataset.size;
-        stock[`${product.id}_${color}_${size}`] = {
-            qty: Number(input.value),
-            price
-        };
-    });
-
-    const productPrices = product.colors.flatMap(productColor => product.sizes.map(size => {
-        return Number(stock[`${product.id}_${productColor}_${size}`]?.price);
-    })).filter(Number.isFinite);
-    product.basePrice = productPrices.length ? Math.min(...productPrices) : price;
-
-    localStorage.setItem('mn_products', JSON.stringify(products));
-    saveStockToStorage();
-    renderProductGrid();
+    } catch (error) { /* Node nao rodando */ }
+    const updatedMap = {};
+    supabaseRows.forEach(row => { updatedMap[row.key] = { price: row.price, qty: row.qty }; });
+    applyCatalogStockData(updatedMap);
     showStoreAdminNotice(
         serverSynced
-            ? `${product.name} (${color}): preço e estoque atualizados.`
-            : 'Alteração local salva, mas o backend de pagamentos ainda precisa ser publicado.',
+            ? `${product.name} (${color}): preço e estoque atualizados para todos em tempo real.`
+            : 'Alteração salva localmente. Sincronize o banco para propagar online.',
         !serverSynced
     );
 }
@@ -945,10 +1030,7 @@ function showStoreAdminNotice(message, warning = false) {
     notice.innerText = `✓ ${message}`;
     document.body.appendChild(notice);
     requestAnimationFrame(() => notice.classList.add('active'));
-    setTimeout(() => {
-        notice.classList.remove('active');
-        setTimeout(() => notice.remove(), 220);
-    }, 2600);
+    setTimeout(() => { notice.classList.remove('active'); setTimeout(() => notice.remove(), 220); }, 2600);
 }
 
 function openProductModal(productId, preferredColor = null) {
@@ -2998,11 +3080,23 @@ function renderAdminStock() {
     });
 }
 
-function saveAdminStockChanges() {
+async function saveAdminStockChanges() {
+    if (!adminSessionActive || currentUser?.role !== 'admin') {
+        alert('Sua sessão administrativa expirou. Entre novamente.');
+        return;
+    }
+
     const tbody = document.getElementById('admin-stock-tbody');
     if (!tbody) return;
 
+    const saveBtn = document.getElementById('save-stock-changes-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = 'Salvando alterações...'; }
+
     const rows = tbody.querySelectorAll('tr');
+    const updatedMap = {};
+    const supabaseRows = [];
+    const backendItems = [];
+
     rows.forEach(row => {
         const key = row.getAttribute('data-stock-key');
         if (!key) return;
@@ -3013,18 +3107,64 @@ function saveAdminStockChanges() {
         if (qtyInput && priceInput) {
             const newQty = parseInt(qtyInput.value) || 0;
             const newPrice = parseFloat(priceInput.value) || 0;
+            if (newPrice > 0 && newQty >= 0) {
+                const parts = key.split('_');
+                const productId = parts[0];
+                const color = parts[1];
+                const size = parts[2];
 
-            stock[key] = {
-                qty: newQty,
-                price: newPrice
-            };
+                updatedMap[key] = { qty: newQty, price: newPrice };
+                supabaseRows.push({
+                    key,
+                    product_id: productId,
+                    color,
+                    size,
+                    price: newPrice,
+                    qty: newQty
+                });
+                backendItems.push({ key, price: newPrice, qty: newQty });
+            }
         }
     });
 
-    saveStockToStorage();
-    alert('Alterações de estoque e preços salvas com sucesso!');
-    renderProductGrid();
-    renderAdminStock();
+    let serverSynced = false;
+
+    // 1. Enviar para o Supabase
+    if (adminAccessToken && supabaseConfig.url && supabaseRows.length > 0) {
+        try {
+            await supabaseRequest('/rest/v1/catalog_stock', {
+                method: 'POST',
+                accessToken: adminAccessToken,
+                headers: { 'Prefer': 'resolution=merge-duplicates' },
+                body: supabaseRows
+            });
+            serverSynced = true;
+        } catch (error) {
+            console.warn('Falha ao salvar tabela de estoque no Supabase:', error.message);
+        }
+    }
+
+    // 2. Enviar para o servidor Node local
+    if (backendItems.length > 0) {
+        try {
+            await backendApiRequest('/api/admin/catalog', {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${adminAccessToken}` },
+                body: JSON.stringify({ items: backendItems })
+            });
+            serverSynced = true;
+        } catch (error) {
+            // Servidor Node não iniciado
+        }
+    }
+
+    // 3. Aplicar alterações globalmente no app e para outras abas/dispositivos
+    applyCatalogStockData(updatedMap);
+
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = 'Salvar alterações no estoque'; }
+    alert(serverSynced
+        ? 'Alterações de estoque e preços salvas e sincronizadas para todos os usuários em tempo real!'
+        : 'Alterações de estoque salvas localmente.');
 }
 
 /* ==========================================================================

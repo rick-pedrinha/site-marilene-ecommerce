@@ -81,22 +81,34 @@ async function updateCatalogFromAdmin(req, res) {
         return;
     }
     const payload = await readJsonBody(req);
-    const productId = String(payload.productId || '').slice(0, 80);
-    const color = String(payload.color || '').slice(0, 40);
-    if (!productId || !color || !Array.isArray(payload.variations)) {
-        throw new Error('Atualização de catálogo inválida.');
-    }
-    payload.variations.forEach(variation => {
-        const size = String(variation.size || '').slice(0, 10);
-        const price = Number(variation.price);
-        const qty = Number(variation.qty);
-        if (!size || !Number.isFinite(price) || price <= 0 || !Number.isInteger(qty) || qty < 0) {
-            throw new Error(`Valores inválidos para o tamanho ${size || '?'}.`);
+
+    if (Array.isArray(payload.items)) {
+        payload.items.forEach(item => {
+            const key = String(item.key || '').slice(0, 100);
+            const price = Number(item.price);
+            const qty = Number(item.qty);
+            if (key && Number.isFinite(price) && price > 0 && Number.isInteger(qty) && qty >= 0) {
+                serverCatalog[key] = { price: Number(price.toFixed(2)), qty };
+            }
+        });
+    } else {
+        const productId = String(payload.productId || '').slice(0, 80);
+        const color = String(payload.color || '').slice(0, 40);
+        if (!productId || !color || !Array.isArray(payload.variations)) {
+            throw new Error('Atualização de catálogo inválida.');
         }
-        serverCatalog[`${productId}_${color}_${size}`] = { price: Number(price.toFixed(2)), qty };
-    });
+        payload.variations.forEach(variation => {
+            const size = String(variation.size || '').slice(0, 10);
+            const price = Number(variation.price);
+            const qty = Number(variation.qty);
+            if (!size || !Number.isFinite(price) || price <= 0 || !Number.isInteger(qty) || qty < 0) {
+                throw new Error(`Valores inválidos para o tamanho ${size || '?'}.`);
+            }
+            serverCatalog[`${productId}_${color}_${size}`] = { price: Number(price.toFixed(2)), qty };
+        });
+    }
     saveServerCatalog();
-    sendJson(res, 200, { updated: true });
+    sendJson(res, 200, { updated: true, stock: serverCatalog });
 }
 
 async function routeApi(req, res, requestUrl) {
