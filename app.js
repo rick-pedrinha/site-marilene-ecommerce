@@ -216,6 +216,26 @@ if (catalogBroadcastChannel) {
         }
     };
 }
+
+// Fallback de polling para iOS/Safari, onde BroadcastChannel nao funciona entre abas.
+// Garante que alteracoes feitas pelo admin no iPhone cheguem a todos os clientes em ate 30s.
+(function startIosCatalogPolling() {
+    const isIosOrSafari = /iP(hone|ad|od)/i.test(navigator.userAgent)
+        || (/Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent));
+    if (!catalogBroadcastChannel || isIosOrSafari) {
+        // Aguarda o supabaseClient estar pronto antes de iniciar o poll
+        const waitAndPoll = () => {
+            if (typeof syncCatalogFromServer === 'function') {
+                setInterval(() => {
+                    try { syncCatalogFromServer(); } catch (e) {}
+                }, 30000);
+            } else {
+                setTimeout(waitAndPoll, 1000);
+            }
+        };
+        waitAndPoll();
+    }
+})();
 let cancellationOrderId = '';
 let adminEditingOrderId = '';
 

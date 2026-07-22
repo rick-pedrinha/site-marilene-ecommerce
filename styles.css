@@ -700,12 +700,100 @@ input:focus, select:focus, textarea:focus {
     max-width: 1200px;
     margin: 0 auto;
     padding: 40px 20px 110px;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-smooth);
+}
+
+.product-card:hover .product-card-img {
+    transform: scale(1.05);
+}
+
+.product-card-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-highlight);
+    color: var(--accent-gold);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 40px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.product-card-color {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    background: rgba(10, 10, 12, .82);
+    color: white;
+    border: 1px solid rgba(255,255,255,.18);
+    padding: 7px 11px;
+    border-radius: 30px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.product-card-content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.product-card-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 8px 0;
+}
+
+.product-card-desc {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+.product-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.product-card-footer > div { display: flex; flex-direction: column; gap: 3px; }
+.product-card-footer small { color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.product-payment-note { color: var(--accent-gold); font-size: 11px; margin-bottom: 4px; }
+
+.product-card-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-light);
+}
+
+.campaign-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px 110px;
 }
 
 .campaign-heading { max-width: 700px; margin-bottom: 38px; }
 .campaign-heading h2 { font: 700 clamp(32px, 5vw, 56px)/1.08 'Montserrat', sans-serif; margin: 10px 0 14px; }
 .campaign-heading p { color: var(--text-muted); font-size: 17px; }
 .campaign-layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; }
+.campaign-layout-three { grid-template-columns: 1fr 1fr 1fr; }
 .campaign-photo, .campaign-video-card { position: relative; overflow: hidden; border-radius: var(--radius-lg); border: 1px solid var(--border-color); background: var(--bg-secondary); margin: 0; min-height: 430px; }
 .campaign-photo img, .campaign-video-card video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .campaign-video-card video { object-position: center bottom; }
@@ -2777,96 +2865,6 @@ input[aria-busy="true"] {
 @keyframes cepLookupPulse {
     to { background-position: -200% 0; }
 }
-
-/* Responsive fixes */
-@media (max-width: 900px) {
-    .campaign-layout { grid-template-columns: 1fr 1fr; }
-    .campaign-photo-tall, .campaign-video-card { min-height: 560px; }
-
-    .story-container {
-        grid-template-columns: 1fr;
-        gap: 40px;
-    }
-    
-    .modal-grid {
-        grid-template-columns: 1fr;
-    }
-
-    #product-modal .modal-grid {
-        grid-template-columns: 1fr;
-    }
-
-    #product-modal .modal-image-side {
-        min-height: 0;
-        aspect-ratio: 1;
-    }
-
-    #product-modal .modal-content-side {
-        padding: 28px;
-    }
-    
-    .checkout-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .admin-layout {
-        grid-template-columns: 1fr;
-    }
-    
-    .admin-sidebar {
-        display: none; /* In production, we'd add a burger menu, for prototype, layout responsive adapts */
-    }
-    
-    .footer-container {
-        grid-template-columns: 1fr;
-        gap: 40px;
-    }
-}
-
-@media (max-width: 600px) {
-    .header-container {
-        padding: 15px;
-    }
-
-    #product-modal {
-        padding: 8px;
-    }
-
-    #product-modal .modal-card {
-        border-radius: 10px;
-    }
-
-    #product-modal .modal-content-side {
-        padding: 24px 18px 28px;
-        gap: 16px;
-    }
-
-    #product-modal .modal-product-title {
-        padding-right: 36px;
-        font-size: 25px;
-    }
-    
-    .main-nav {
-        display: none; /* Simple navbar responsive */
-    }
-    
-    .hero-content {
-        padding: 15px;
-    }
-    
-    .products-section {
-        padding: 60px 15px;
-    }
-
-    .products-grid { grid-template-columns: 1fr; gap: 24px; }
-    .product-card-footer { align-items: flex-end; gap: 12px; }
-    .campaign-section { padding: 20px 15px 70px; }
-    .campaign-layout { grid-template-columns: 1fr; }
-    .campaign-photo, .campaign-video-card, .campaign-photo-wide { min-height: 520px; }
-    
-    .cart-drawer {
-        width: 100%;
-        right: -100%;
     }
     
     .metrics-grid {
